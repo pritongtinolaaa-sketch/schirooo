@@ -281,7 +281,7 @@ async def get_browser_data(cookies: dict):
                             info['country'] = user_info.get('countryOfSignup') or user_info.get('currentCountry')
                         info['member_since'] = user_info.get('memberSince')
                         plan_data = models.get('planInfo', {}).get('data', {})
-                        info['plan'] = plan_data.get('planName')
+                        info['plan'] = normalize_plan_name(plan_data.get('planName'))
                         info['next_billing'] = plan_data.get('nextBillingDate')
                         profiles_data = models.get('profiles', {}).get('data', [])
                         info['profiles'] = [pr.get('firstName', pr.get('profileName', 'Profile')) for pr in profiles_data if isinstance(pr, dict)]
