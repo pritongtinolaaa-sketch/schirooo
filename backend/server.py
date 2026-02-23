@@ -808,6 +808,69 @@ async def get_free_cookies(user: dict = Depends(get_current_user)):
     cookies = await db.free_cookies.find({}, {"_id": 0}).sort("created_at", -1).to_list(limit)
     return cookies
 
+# --- NFToken Auto-Refresh for Free Cookies ---
+NFTOKEN_REFRESH_INTERVAL = 45 * 60  # 45 minutes in seconds
+
+def parse_cookie_string_to_dict(cookie_str: str) -> dict:
+    """Parse 'key1=val1; key2=val2' string into a dict"""
+    cookies = {}
+    for pair in cookie_str.split(';'):
+        pair = pair.strip()
+        if '=' in pair:
+            k, _, v = pair.partition('=')
+            cookies[k.strip()] = v.strip()
+    return cookies
+
+async def refresh_free_cookie_tokens():
+    """Background task that refreshes NFTokens for all free cookies every 45 minutes"""
+    while True:
+        try:
+            await asyncio.sleep(NFTOKEN_REFRESH_INTERVAL)
+            free_cookies = await db.free_cookies.find({}, {"_id": 0}).to_list(500)
+            if not free_cookies:
+                continue
+
+            logger.info(f"NFToken refresh: processing {len(free_cookies)} free cookies")
+            refreshed = 0
+
+            for fc in free_cookies:
+                try:
+                    # Try browser cookies first (enriched), then original cookie
+                    cookies_dict = None
+                    if fc.get("browser_cookies"):
+                        cookies_dict = parse_cookie_string_to_dict(fc["browser_cookies"])
+                    if (not cookies_dict or not cookies_dict.get("NetflixId")) and fc.get("full_cookie"):
+                        cookies_dict = parse_cookies_auto(fc["full_cookie"])
+
+                    if not cookies_dict:
+                        continue
+
+                    success, nft, nft_err = await generate_nftoken(cookies_dict)
+                    if success and nft:
+                        await db.free_cookies.update_one(
+                            {"id": fc["id"]},
+                            {"$set": {
+                                "nftoken": nft,
+                                "nftoken_link": f"https://netflix.com/?nftoken={nft}",
+                                "last_refreshed": datetime.now(timezone.utc).isoformat()
+                            }}
+                        )
+                        refreshed += 1
+                    else:
+                        logger.warning(f"NFToken refresh failed for {fc['id']}: {nft_err}")
+                except Exception as e:
+                    logger.warning(f"NFToken refresh error for {fc['id']}: {e}")
+
+            logger.info(f"NFToken refresh complete: {refreshed}/{len(free_cookies)} refreshed")
+        except asyncio.CancelledError:
+            logger.info("NFToken refresh task cancelled")
+            break
+        except Exception as e:
+            logger.error(f"NFToken refresh task error: {e}")
+            await asyncio.sleep(60)  # Wait a minute on error before retrying
+
+_refresh_task = None
+
 # Include router
 app.include_router(api_router)
 
