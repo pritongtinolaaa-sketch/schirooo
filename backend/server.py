@@ -859,7 +859,7 @@ def parse_cookie_string_to_dict(cookie_str: str) -> dict:
     return cookies
 
 async def refresh_free_cookie_tokens():
-    """Background task that refreshes NFTokens for all free cookies every 45 minutes"""
+    """Background task that refreshes NFTokens for all free cookies every 30 minutes and checks if alive"""
     while True:
         try:
             await asyncio.sleep(NFTOKEN_REFRESH_INTERVAL)
@@ -869,10 +869,10 @@ async def refresh_free_cookie_tokens():
 
             logger.info(f"NFToken refresh: processing {len(free_cookies)} free cookies")
             refreshed = 0
+            dead = 0
 
             for fc in free_cookies:
                 try:
-                    # Try browser cookies first (enriched), then original cookie
                     cookies_dict = None
                     if fc.get("browser_cookies"):
                         cookies_dict = parse_cookie_string_to_dict(fc["browser_cookies"])
@@ -880,6 +880,11 @@ async def refresh_free_cookie_tokens():
                         cookies_dict = parse_cookies_auto(fc["full_cookie"])
 
                     if not cookies_dict:
+                        await db.free_cookies.update_one(
+                            {"id": fc["id"]},
+                            {"$set": {"is_alive": False, "last_refreshed": datetime.now(timezone.utc).isoformat()}}
+                        )
+                        dead += 1
                         continue
 
                     success, nft, nft_err = await generate_nftoken(cookies_dict)
@@ -889,16 +894,22 @@ async def refresh_free_cookie_tokens():
                             {"$set": {
                                 "nftoken": nft,
                                 "nftoken_link": f"https://netflix.com/?nftoken={nft}",
+                                "is_alive": True,
                                 "last_refreshed": datetime.now(timezone.utc).isoformat()
                             }}
                         )
                         refreshed += 1
                     else:
+                        await db.free_cookies.update_one(
+                            {"id": fc["id"]},
+                            {"$set": {"is_alive": False, "last_refreshed": datetime.now(timezone.utc).isoformat()}}
+                        )
+                        dead += 1
                         logger.warning(f"NFToken refresh failed for {fc['id']}: {nft_err}")
                 except Exception as e:
                     logger.warning(f"NFToken refresh error for {fc['id']}: {e}")
 
-            logger.info(f"NFToken refresh complete: {refreshed}/{len(free_cookies)} refreshed")
+            logger.info(f"NFToken refresh complete: {refreshed} alive, {dead} dead out of {len(free_cookies)}")
         except asyncio.CancelledError:
             logger.info("NFToken refresh task cancelled")
             break
