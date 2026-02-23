@@ -1,6 +1,6 @@
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { LayoutDashboard, History, LogOut, Shield, KeyRound, ScrollText } from 'lucide-react';
+import { LayoutDashboard, History, LogOut, Shield, KeyRound, ScrollText, Gift } from 'lucide-react';
 
 export default function Navbar() {
   const { user, logout } = useAuth();
@@ -43,6 +43,16 @@ export default function Navbar() {
           >
             <History className="w-4 h-4" />
             History
+          </Link>
+          <Link
+            to="/free-cookies"
+            data-testid="nav-free-cookies-link"
+            className={`flex items-center gap-2 px-4 py-2 rounded-sm text-sm transition-colors ${
+              isActive('/free-cookies') ? 'text-white bg-white/10' : 'text-green-400/70 hover:text-green-400 hover:bg-white/5'
+            }`}
+          >
+            <Gift className="w-4 h-4" />
+            Free Cookies
           </Link>
           {user?.is_master && (
             <>
