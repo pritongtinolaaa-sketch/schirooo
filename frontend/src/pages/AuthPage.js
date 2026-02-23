@@ -29,7 +29,7 @@ export default function AuthPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#050505] relative overflow-hidden">
+    <div className="h-screen flex items-center justify-center bg-[#050505] relative overflow-hidden">
       <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse at center, rgba(229,9,20,0.06) 0%, transparent 60%)' }} />
 
       <motion.div
