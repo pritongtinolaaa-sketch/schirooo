@@ -1,6 +1,6 @@
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { LayoutDashboard, History, LogOut, Shield } from 'lucide-react';
+import { LayoutDashboard, History, LogOut, Shield, KeyRound } from 'lucide-react';
 
 export default function Navbar() {
   const { user, logout } = useAuth();
@@ -19,7 +19,7 @@ export default function Navbar() {
         <Link to="/" className="flex items-center gap-3" data-testid="nav-logo">
           <Shield className="w-6 h-6 text-primary" />
           <span className="font-bebas text-2xl tracking-wider text-white">
-            COOKIE<span className="text-primary">CHECK</span>
+            SCHIRO
           </span>
         </Link>
 
@@ -44,11 +44,23 @@ export default function Navbar() {
             <History className="w-4 h-4" />
             History
           </Link>
+          {user?.is_master && (
+            <Link
+              to="/admin"
+              data-testid="nav-admin-link"
+              className={`flex items-center gap-2 px-4 py-2 rounded-sm text-sm transition-colors ${
+                isActive('/admin') ? 'text-white bg-white/10' : 'text-primary/70 hover:text-primary hover:bg-white/5'
+              }`}
+            >
+              <KeyRound className="w-4 h-4" />
+              Keys
+            </Link>
+          )}
 
           <div className="w-px h-6 bg-white/10 mx-3" />
 
           <span className="text-sm text-white/40 mr-3" data-testid="nav-username">
-            {user.username}
+            {user.label}
           </span>
           <button
             onClick={logout}
