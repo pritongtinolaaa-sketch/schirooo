@@ -37,6 +37,7 @@ export default function DashboardPage() {
       }, { headers });
       setResults(res.data);
       toast.success(`Checked ${res.data.total} cookie(s)`);
+      setCookieText('');
     } catch (err) {
       toast.error(err.response?.data?.detail || 'Check failed');
     } finally {
