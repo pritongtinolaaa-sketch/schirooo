@@ -460,7 +460,7 @@ async def check_netflix_cookie(cookie_text, format_type="auto"):
                                                 result['member_since'] = user_info.get('memberSince')
                                             plan_info = models.get('planInfo', {}).get('data', {})
                                             if not result['plan']:
-                                                result['plan'] = plan_info.get('planName')
+                                                result['plan'] = normalize_plan_name(plan_info.get('planName'))
                                             if not result['next_billing']:
                                                 result['next_billing'] = plan_info.get('nextBillingDate')
                                             if not result['profiles']:
