@@ -12,38 +12,40 @@ Build a full-stack "Schiro Cookie Checker" application that validates Netflix co
 
 ### Authentication & Admin
 - Key-based login, master key: `PritongTinola*3030` (unlimited devices)
-- Admin panel for key management with device limits and session revocation
+- Admin panel for key management with device limits
 
 ### Cookie Checker
 - Paste or upload Netflix cookies (Netscape, JSON, key=value)
-- Multi-step validation: Playwright → NFToken → httpx scraping
+- Multi-step validation: Playwright → NFToken → httpx
 - Extracts: email, plan, country, member since, next billing, profiles
 - Plan detection: Premium (UHD), Standard (HD), Standard with ads, Basic, Mobile
 - Results separated into Valid/Expired/Invalid sections
 
 ### Admin Logger
-- Valid cookie checks auto-logged, admin-only page at `/admin/logs`
+- Valid cookie checks auto-logged, admin page at `/admin/logs`
 
 ### Free Cookies
 - Admin checks cookies, adds valid ones via "Add to Free Cookies" button
 - `/free-cookies` page: admin manages (limit, delete, refresh), users view
-- **Browser cookies & original cookie hidden from non-admin users** (stripped from API + hidden in UI)
-- Non-admin users see: email, plan, country, profiles, nftoken only
+- Browser cookies hidden from non-admin, original cookie visible to all
+- **ALIVE/DEAD status** — refresh checks if cookies are still valid
 
-### NFToken Auto-Refresh
-- Background task refreshes tokens every 45 minutes
-- Admin can force-refresh via "REFRESH TOKENS NOW" button
-- `last_refreshed` timestamp shown on cards
+### NFToken Auto-Refresh (30 min)
+- Background task refreshes every **30 minutes** and checks cookie liveness
+- Sets `is_alive` field: true (ALIVE badge) or false (DEAD badge)
+- Admin can force-refresh via button, sees alive/dead counts
+
+### TV Sign-In Code (Feb 2026)
+- Users can enter 8-digit TV sign-in code on alive free cookies
+- Playwright navigates to netflix.com/tv8 with cookie and submits code
+- Input hidden on dead cookies
+- POST /api/tv-code endpoint with proper validation
 
 ### UI
 - Dark Netflix-inspired theme, footer: "Created by Schiro. Not for Sale."
 
 ## DB Collections
-- `access_keys`, `checks`, `valid_logs`, `free_cookies`, `settings`
-
-## Critical Notes
-- DO NOT simplify cookie checking flow (Playwright → NFToken → httpx)
-- Plan fallback checks specific names first (Premium (UHD) before Premium)
+- `access_keys`, `checks`, `valid_logs`, `free_cookies` (+ is_alive, last_refreshed), `settings`
 
 ## Backlog
 - No pending tasks.
