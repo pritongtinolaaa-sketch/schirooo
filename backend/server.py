@@ -292,7 +292,7 @@ async def get_browser_data(cookies: dict):
 
                 # Fallback plan
                 if not info['plan']:
-                    for pl in ['Premium', 'Standard with ads', 'Standard', 'Basic', 'Mobile']:
+                    for pl in ['Premium (UHD)', 'Standard with ads', 'Standard (HD)', 'Standard', 'Basic with ads', 'Basic', 'Mobile']:
                         if pl.lower() in account_html.lower():
                             info['plan'] = pl
                             break
@@ -455,7 +455,7 @@ async def check_netflix_cookie(cookie_text, format_type="auto"):
                                 if em:
                                     result['email'] = em.group(1)
                             if not result['plan']:
-                                for p in ['Premium', 'Standard with ads', 'Standard', 'Basic', 'Mobile']:
+                                for p in ['Premium (UHD)', 'Standard with ads', 'Standard (HD)', 'Standard', 'Basic with ads', 'Basic', 'Mobile']:
                                     if p.lower() in html.lower():
                                         result['plan'] = p
                                         break
