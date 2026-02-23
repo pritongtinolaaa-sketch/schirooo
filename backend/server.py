@@ -1110,11 +1110,11 @@ def format_member_since(raw: str) -> str:
     # Decode any remaining \xNN escapes
     cleaned = re.sub(r'\\x([0-9a-fA-F]{2})', lambda m: chr(int(m.group(1), 16)), raw)
     cleaned = cleaned.strip()
-    # Translate month names to English
+    # Translate month names to English (use word boundaries to avoid partial matches)
     for foreign, english in MONTH_MAP.items():
-        cleaned = re.sub(re.escape(foreign), english, cleaned, flags=re.IGNORECASE)
+        cleaned = re.sub(r'\b' + re.escape(foreign) + r'\b', english, cleaned, flags=re.IGNORECASE)
     # Extract month and year
-    match = re.search(r'([A-Za-z]+)\s*(\d{4})', cleaned)
+    match = re.search(r'([A-Za-zéû]+)\s*(\d{4})', cleaned)
     if match:
         return f"{match.group(1)} {match.group(2)}"
     return cleaned
