@@ -66,6 +66,12 @@ function FreeCookieCard({ cookie, index, isAdmin, onDelete }) {
           <div className="w-2 h-2 rounded-full bg-green-400 shadow-[0_0_6px_rgba(74,222,128,0.5)]" />
           <span className="font-mono text-xs text-white/30">FREE COOKIE #{index + 1}</span>
           <Badge className="bg-green-500/20 text-green-400 border border-green-500/30 text-xs font-mono">VALID</Badge>
+          {cookie.last_refreshed && (
+            <span className="text-[10px] text-white/15 font-mono flex items-center gap-1">
+              <RefreshCw className="w-2.5 h-2.5" />
+              {new Date(cookie.last_refreshed).toLocaleTimeString()}
+            </span>
+          )}
         </div>
         {isAdmin && (
           <Button
