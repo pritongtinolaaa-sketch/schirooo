@@ -365,6 +365,67 @@ async def delete_check(check_id: str, user: dict = Depends(get_current_user)):
         raise HTTPException(status_code=404, detail="Check not found")
     return {"message": "Deleted"}
 
+# --- Admin Routes ---
+@api_router.post("/admin/keys")
+async def create_key(data: KeyCreate, user: dict = Depends(require_admin)):
+    key_value = secrets.token_urlsafe(16)
+    key_id = str(uuid.uuid4())
+    await db.access_keys.insert_one({
+        "id": key_id,
+        "key_value": key_value,
+        "label": data.label,
+        "max_devices": data.max_devices,
+        "active_sessions": [],
+        "is_master": False,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    })
+    return {"id": key_id, "key_value": key_value, "label": data.label, "max_devices": data.max_devices}
+
+@api_router.get("/admin/keys")
+async def list_keys(user: dict = Depends(require_admin)):
+    keys = await db.access_keys.find({}, {"_id": 0}).to_list(100)
+    for k in keys:
+        k["key_preview"] = k["key_value"][:4] + "****"
+        k["session_count"] = len(k.get("active_sessions", []))
+    return keys
+
+@api_router.get("/admin/keys/{key_id}/reveal")
+async def reveal_key(key_id: str, user: dict = Depends(require_admin)):
+    key = await db.access_keys.find_one({"id": key_id}, {"_id": 0})
+    if not key:
+        raise HTTPException(status_code=404, detail="Key not found")
+    return {"key_value": key["key_value"]}
+
+@api_router.patch("/admin/keys/{key_id}")
+async def update_key(key_id: str, data: KeyUpdate, user: dict = Depends(require_admin)):
+    updates = {}
+    if data.label is not None:
+        updates["label"] = data.label
+    if data.max_devices is not None:
+        updates["max_devices"] = data.max_devices
+    if not updates:
+        raise HTTPException(status_code=400, detail="Nothing to update")
+    await db.access_keys.update_one({"id": key_id}, {"$set": updates})
+    return {"message": "Updated"}
+
+@api_router.delete("/admin/keys/{key_id}")
+async def delete_key(key_id: str, user: dict = Depends(require_admin)):
+    key = await db.access_keys.find_one({"id": key_id}, {"_id": 0})
+    if not key:
+        raise HTTPException(status_code=404, detail="Key not found")
+    if key.get("is_master"):
+        raise HTTPException(status_code=400, detail="Cannot delete master key")
+    await db.access_keys.delete_one({"id": key_id})
+    return {"message": "Key deleted"}
+
+@api_router.delete("/admin/keys/{key_id}/sessions/{session_id}")
+async def revoke_session(key_id: str, session_id: str, user: dict = Depends(require_admin)):
+    await db.access_keys.update_one(
+        {"id": key_id},
+        {"$pull": {"active_sessions": {"session_id": session_id}}}
+    )
+    return {"message": "Session revoked"}
+
 # Include router
 app.include_router(api_router)
 
