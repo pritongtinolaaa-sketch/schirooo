@@ -814,12 +814,13 @@ async def get_free_cookies(user: dict = Depends(get_current_user)):
 
 @api_router.post("/admin/free-cookies/refresh")
 async def force_refresh_tokens(user: dict = Depends(require_admin)):
-    """Manually trigger NFToken refresh for all free cookies"""
+    """Manually trigger NFToken refresh for all free cookies and check if alive"""
     free_cookies = await db.free_cookies.find({}, {"_id": 0}).to_list(500)
     if not free_cookies:
-        return {"message": "No free cookies to refresh", "refreshed": 0, "total": 0}
+        return {"message": "No free cookies to refresh", "refreshed": 0, "dead": 0, "total": 0}
 
     refreshed = 0
+    dead = 0
     for fc in free_cookies:
         try:
             cookies_dict = None
@@ -828,6 +829,11 @@ async def force_refresh_tokens(user: dict = Depends(require_admin)):
             if (not cookies_dict or not cookies_dict.get("NetflixId")) and fc.get("full_cookie"):
                 cookies_dict = parse_cookies_auto(fc["full_cookie"])
             if not cookies_dict:
+                await db.free_cookies.update_one(
+                    {"id": fc["id"]},
+                    {"$set": {"is_alive": False, "last_refreshed": datetime.now(timezone.utc).isoformat()}}
+                )
+                dead += 1
                 continue
             success, nft, nft_err = await generate_nftoken(cookies_dict)
             if success and nft:
@@ -836,14 +842,21 @@ async def force_refresh_tokens(user: dict = Depends(require_admin)):
                     {"$set": {
                         "nftoken": nft,
                         "nftoken_link": f"https://netflix.com/?nftoken={nft}",
+                        "is_alive": True,
                         "last_refreshed": datetime.now(timezone.utc).isoformat()
                     }}
                 )
                 refreshed += 1
+            else:
+                await db.free_cookies.update_one(
+                    {"id": fc["id"]},
+                    {"$set": {"is_alive": False, "last_refreshed": datetime.now(timezone.utc).isoformat()}}
+                )
+                dead += 1
         except Exception:
             pass
 
-    return {"message": f"Refreshed {refreshed}/{len(free_cookies)} tokens", "refreshed": refreshed, "total": len(free_cookies)}
+    return {"message": f"Refreshed {refreshed} alive, {dead} dead out of {len(free_cookies)}", "refreshed": refreshed, "dead": dead, "total": len(free_cookies)}
 
 # --- NFToken Auto-Refresh for Free Cookies ---
 NFTOKEN_REFRESH_INTERVAL = 30 * 60  # 30 minutes in seconds
