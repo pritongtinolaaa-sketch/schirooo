@@ -294,12 +294,30 @@ async def get_browser_data(cookies: dict):
                     if m:
                         info['email'] = m.group(1)
 
-                # Fallback plan
+                # Fallback plan - look for plan indicator patterns in account page
                 if not info['plan']:
-                    for pl in ['Premium (UHD)', 'Standard with ads', 'Standard (HD)', 'Standard', 'Basic with ads', 'Basic', 'Mobile']:
-                        if pl.lower() in account_html.lower():
-                            info['plan'] = pl
+                    # Try to find current plan in specific sections (not the comparison table)
+                    current_plan_patterns = [
+                        r'data-uia="plan-label"[^>]*>([^<]+)',
+                        r'class="[^"]*planName[^"]*"[^>]*>([^<]+)',
+                        r'class="[^"]*currentPlan[^"]*"[^>]*>([^<]+)',
+                        r'"currentPlanSku"\s*:\s*"([^"]+)"',
+                        r'"planName"\s*:\s*"([^"]+)"',
+                        r'"planSlug"\s*:\s*"([^"]+)"',
+                    ]
+                    for pattern in current_plan_patterns:
+                        m = re.search(pattern, account_html, re.IGNORECASE)
+                        if m:
+                            info['plan'] = normalize_plan_name(m.group(1))
                             break
+                    # Last resort: search HTML for plan names but be stricter
+                    if not info['plan']:
+                        for pl in ['Premium', 'Standard with ads', 'Standard', 'Basic with ads', 'Basic', 'Mobile']:
+                            # Look for the plan name near "your plan" or "current plan" context
+                            pattern = rf'(?:your|current|active)\s+plan[^<]*{re.escape(pl)}'
+                            if re.search(pattern, account_html, re.IGNORECASE):
+                                info['plan'] = normalize_plan_name(pl)
+                                break
             except Exception as e:
                 logger.warning(f"Account page error: {e}")
 
