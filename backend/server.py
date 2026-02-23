@@ -272,7 +272,10 @@ async def get_browser_data(cookies: dict):
                 ctx_match = re.search(r'reactContext\s*=\s*({.*?});', account_html, re.DOTALL)
                 if ctx_match:
                     try:
-                        ctx = json.loads(ctx_match.group(1))
+                        raw_json = ctx_match.group(1)
+                        # Fix invalid escape sequences that Netflix puts in their JSON
+                        raw_json = re.sub(r'\\(?!["\\/bfnrtu])', r'\\\\', raw_json)
+                        ctx = json.loads(raw_json)
                         models = ctx.get('models', {})
                         user_info = models.get('userInfo', {}).get('data', {})
                         if not info['email']:
