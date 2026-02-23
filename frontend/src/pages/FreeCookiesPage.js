@@ -7,7 +7,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { toast } from 'sonner';
 import {
   Gift, Trash2, Copy, Check, Loader2, Mail, CreditCard, Globe, Calendar,
-  Clock, Users, Key, ChevronDown, AlertCircle, Link2, Settings, RefreshCw
+  Clock, Users, Key, ChevronDown, AlertCircle, Link2, Settings, RefreshCw, Tv, Monitor
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import axios from 'axios';
