@@ -54,6 +54,34 @@ function InfoRow({ icon, label, value }) {
 function FreeCookieCard({ cookie, index, isAdmin, onDelete }) {
   const [cookieOpen, setCookieOpen] = useState(false);
   const [browserCookieOpen, setBrowserCookieOpen] = useState(false);
+  const [tvCode, setTvCode] = useState('');
+  const [tvLoading, setTvLoading] = useState(false);
+  const [tvResult, setTvResult] = useState(null);
+  const { token } = useAuth();
+
+  const isAlive = cookie.is_alive !== false;
+
+  const handleTvCode = async () => {
+    if (!tvCode.trim()) { toast.error('Enter the code from your TV'); return; }
+    setTvLoading(true);
+    setTvResult(null);
+    try {
+      const res = await axios.post(`${API}/tv-code`, {
+        code: tvCode,
+        cookie_id: cookie.id
+      }, { headers: { Authorization: `Bearer ${token}` } });
+      setTvResult(res.data);
+      if (res.data.success) {
+        toast.success(res.data.message);
+      } else {
+        toast.error(res.data.message);
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Failed to activate TV');
+    } finally {
+      setTvLoading(false);
+    }
+  };
 
   return (
     <div
