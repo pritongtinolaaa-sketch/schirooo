@@ -286,20 +286,22 @@ async def get_browser_data(cookies: dict):
                             info['country'] = user_info.get('countryOfSignup') or user_info.get('currentCountry')
                         info['member_since'] = format_member_since(user_info.get('memberSince'))
                         plan_data = models.get('planInfo', {}).get('data', {})
-                        raw_plan = plan_data.get('planName')
-                        # Netflix restructured: plan is now in accountInfo.experience
                         account_data = models.get('accountInfo', {}).get('data', {})
-                        if not raw_plan and account_data.get('experience'):
-                            raw_plan = account_data.get('experience')
-                        logger.info(f"reactContext plan source: {raw_plan}")
-                        # Try multiple plan fields as fallback
-                        if not raw_plan:
-                            for alt_key in ['planTitle', 'planSlug', 'currentPlanSlug', 'tierName', 'tier']:
-                                raw_plan = plan_data.get(alt_key)
-                                if raw_plan:
-                                    break
-                        info['plan'] = normalize_plan_name(raw_plan)
-                        # Also get email and country from accountInfo if available
+                        # Plan from maxStreams (most reliable - doesn't change with language)
+                        max_streams = account_data.get('maxStreams')
+                        if max_streams is not None:
+                            if max_streams >= 4:
+                                info['plan'] = 'Premium (UHD)'
+                            elif max_streams >= 2:
+                                info['plan'] = 'Standard (HD)'
+                            else:
+                                info['plan'] = 'Basic'
+                            logger.info(f"Plan from maxStreams={max_streams}: {info['plan']}")
+                        # Fallback: try planInfo.planName
+                        if not info['plan']:
+                            raw_plan = plan_data.get('planName')
+                            if raw_plan:
+                                info['plan'] = normalize_plan_name(raw_plan)
                         if not info['email'] and account_data.get('emailAddress'):
                             info['email'] = account_data['emailAddress']
                         if not info['country'] and account_data.get('country'):
