@@ -1088,6 +1088,37 @@ async def submit_tv_code(data: TVCodeRequest, user: dict = Depends(get_current_u
 # --- NFToken Auto-Refresh for Free Cookies ---
 NFTOKEN_REFRESH_INTERVAL = 30 * 60  # 30 minutes in seconds
 
+# Month name translations to English
+MONTH_MAP = {
+    'janvier': 'January', 'février': 'February', 'mars': 'March', 'avril': 'April',
+    'mai': 'May', 'juin': 'June', 'juillet': 'July', 'août': 'August',
+    'septembre': 'September', 'octobre': 'October', 'novembre': 'November', 'décembre': 'December',
+    'enero': 'January', 'febrero': 'February', 'marzo': 'March', 'abril': 'April',
+    'mayo': 'May', 'junio': 'June', 'julio': 'July', 'agosto': 'August',
+    'septiembre': 'September', 'octubre': 'October', 'noviembre': 'November', 'diciembre': 'December',
+    'janeiro': 'January', 'fevereiro': 'February', 'março': 'March',
+    'junho': 'June', 'julho': 'July', 'setembro': 'September', 'outubro': 'October',
+    'dezembro': 'December',
+    'januar': 'January', 'februar': 'February', 'märz': 'March',
+    'juni': 'June', 'juli': 'July', 'oktober': 'October', 'dezember': 'December',
+}
+
+def format_member_since(raw: str) -> str:
+    """Clean up member_since to 'Month Year' format"""
+    if not raw:
+        return None
+    # Decode any remaining \xNN escapes
+    cleaned = re.sub(r'\\x([0-9a-fA-F]{2})', lambda m: chr(int(m.group(1), 16)), raw)
+    cleaned = cleaned.strip()
+    # Translate month names to English
+    for foreign, english in MONTH_MAP.items():
+        cleaned = re.sub(re.escape(foreign), english, cleaned, flags=re.IGNORECASE)
+    # Extract month and year
+    match = re.search(r'([A-Za-z]+)\s*(\d{4})', cleaned)
+    if match:
+        return f"{match.group(1)} {match.group(2)}"
+    return cleaned
+
 def normalize_plan_name(raw_plan: str) -> str:
     """Normalize plan name from any Netflix format/language to standard English display name"""
     if not raw_plan:
