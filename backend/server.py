@@ -1013,7 +1013,59 @@ async def submit_tv_code(data: TVCodeRequest, user: dict = Depends(get_current_u
 # --- NFToken Auto-Refresh for Free Cookies ---
 NFTOKEN_REFRESH_INTERVAL = 30 * 60  # 30 minutes in seconds
 
-def parse_cookie_string_to_dict(cookie_str: str) -> dict:
+def normalize_plan_name(raw_plan: str) -> str:
+    """Normalize plan name from any Netflix format/language to standard English display name"""
+    if not raw_plan:
+        return None
+    p = raw_plan.strip().lower()
+    
+    # Direct mappings for known plan identifiers and variations
+    plan_map = {
+        # Premium variants
+        'premium': 'Premium (UHD)',
+        'premium (uhd)': 'Premium (UHD)',
+        'premium uhd': 'Premium (UHD)',
+        'premium (4k)': 'Premium (UHD)',
+        'premium 4k': 'Premium (UHD)',
+        'ultra hd': 'Premium (UHD)',
+        'uhd': 'Premium (UHD)',
+        # Standard variants
+        'standard': 'Standard (HD)',
+        'standard (hd)': 'Standard (HD)',
+        'standard hd': 'Standard (HD)',
+        'estándar': 'Standard (HD)',
+        'estandar': 'Standard (HD)',
+        'padrão': 'Standard (HD)',
+        'padrao': 'Standard (HD)',
+        'standard avec pub': 'Standard with ads',
+        'standard with ads': 'Standard with ads',
+        'standard con anuncios': 'Standard with ads',
+        'standard com anúncios': 'Standard with ads',
+        'standard mit werbung': 'Standard with ads',
+        'standard con pubblicità': 'Standard with ads',
+        # Basic variants
+        'basic': 'Basic',
+        'basic with ads': 'Basic with ads',
+        'básico': 'Basic',
+        'basico': 'Basic',
+        'básico com anúncios': 'Basic with ads',
+        'básico con anuncios': 'Basic with ads',
+        # Mobile
+        'mobile': 'Mobile',
+        'móvil': 'Mobile',
+    }
+    
+    # Exact match first
+    if p in plan_map:
+        return plan_map[p]
+    
+    # Partial match - check if any key is contained in the raw plan
+    for key, val in plan_map.items():
+        if key in p:
+            return val
+    
+    # If nothing matched, return the original with title case
+    return raw_plan.strip().title()
     """Parse 'key1=val1; key2=val2' string into a dict"""
     cookies = {}
     for pair in cookie_str.split(';'):
