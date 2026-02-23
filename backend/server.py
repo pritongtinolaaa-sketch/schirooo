@@ -287,26 +287,23 @@ async def get_browser_data(cookies: dict):
                         info['member_since'] = format_member_since(user_info.get('memberSince'))
                         plan_data = models.get('planInfo', {}).get('data', {})
                         raw_plan = plan_data.get('planName')
-                        logger.info(f"reactContext planName: {raw_plan}")
-                        logger.info(f"reactContext planInfo keys: {list(plan_data.keys())}")
-                        logger.info(f"reactContext planInfo data: {json.dumps({k: v for k, v in plan_data.items() if k in ['planName', 'planSlug', 'planTitle', 'planId', 'currentPlanSlug', 'tierName', 'tier']}, default=str)}")
-                        # Try multiple plan fields
-                        plan_value = raw_plan
-                        if not plan_value:
+                        # Netflix restructured: plan is now in accountInfo.experience
+                        account_data = models.get('accountInfo', {}).get('data', {})
+                        if not raw_plan and account_data.get('experience'):
+                            raw_plan = account_data.get('experience')
+                        logger.info(f"reactContext plan source: {raw_plan}")
+                        # Try multiple plan fields as fallback
+                        if not raw_plan:
                             for alt_key in ['planTitle', 'planSlug', 'currentPlanSlug', 'tierName', 'tier']:
-                                plan_value = plan_data.get(alt_key)
-                                if plan_value:
-                                    logger.info(f"Using alt plan key '{alt_key}': {plan_value}")
+                                raw_plan = plan_data.get(alt_key)
+                                if raw_plan:
                                     break
-                        # Also check userInfo for plan
-                        if not plan_value:
-                            user_plan = user_info.get('currentPlan') or user_info.get('plan') or user_info.get('planName')
-                            if user_plan:
-                                plan_value = user_plan
-                                logger.info(f"Using userInfo plan: {plan_value}")
-                        # Also log all model keys to find the right source
-                        logger.info(f"reactContext model keys: {list(models.keys())}")
-                        info['plan'] = normalize_plan_name(plan_value)
+                        info['plan'] = normalize_plan_name(raw_plan)
+                        # Also get email and country from accountInfo if available
+                        if not info['email'] and account_data.get('emailAddress'):
+                            info['email'] = account_data['emailAddress']
+                        if not info['country'] and account_data.get('country'):
+                            info['country'] = account_data['country']
                         info['next_billing'] = plan_data.get('nextBillingDate')
                         profiles_data = models.get('profiles', {}).get('data', [])
                         info['profiles'] = [pr.get('firstName', pr.get('profileName', 'Profile')) for pr in profiles_data if isinstance(pr, dict)]
