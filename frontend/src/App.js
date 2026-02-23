@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/sonner";
 import AuthPage from "@/pages/AuthPage";
 import DashboardPage from "@/pages/DashboardPage";
 import HistoryPage from "@/pages/HistoryPage";
+import AdminPage from "@/pages/AdminPage";
 import Navbar from "@/components/Navbar";
 
 function ProtectedRoute({ children }) {
