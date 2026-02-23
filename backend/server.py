@@ -469,10 +469,19 @@ async def check_netflix_cookie(cookie_text, format_type="auto"):
                                 if em:
                                     result['email'] = em.group(1)
                             if not result['plan']:
-                                for p in ['Premium', 'Standard with ads', 'Standard', 'Basic with ads', 'Basic', 'Mobile']:
-                                    if p.lower() in html.lower():
-                                        result['plan'] = normalize_plan_name(p)
+                                # Extract from JSON data in page
+                                plan_matches = re.findall(r'"planName"\s*:\s*"([^"]+)"', html)
+                                for pm in plan_matches:
+                                    normalized = normalize_plan_name(pm)
+                                    if normalized:
+                                        result['plan'] = normalized
                                         break
+                                if not result['plan']:
+                                    slug_matches = re.findall(r'"(?:planSlug|currentPlanSlug)"\s*:\s*"([^"]+)"', html)
+                                    for sm in slug_matches:
+                                        result['plan'] = normalize_plan_name(sm)
+                                        if result['plan']:
+                                            break
                         elif result["status"] != "valid":
                             result["status"] = "expired"
                             result["error"] = "Cookie expired - redirected to login"
