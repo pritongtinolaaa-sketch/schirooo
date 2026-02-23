@@ -265,10 +265,10 @@ async def get_browser_data(cookies: dict):
             try:
                 await page.goto("https://www.netflix.com/YourAccount", timeout=20000)
                 await page.wait_for_load_state("domcontentloaded", timeout=10000)
-                await page.wait_for_timeout(2000)
+                await page.wait_for_timeout(3000)
                 account_html = await page.content()
 
-                # Extract from reactContext
+                # Extract from reactContext (works if page hasn't fully rendered yet)
                 ctx_match = re.search(r'reactContext\s*=\s*({.*?});', account_html, re.DOTALL)
                 if ctx_match:
                     try:
@@ -281,12 +281,76 @@ async def get_browser_data(cookies: dict):
                             info['country'] = user_info.get('countryOfSignup') or user_info.get('currentCountry')
                         info['member_since'] = user_info.get('memberSince')
                         plan_data = models.get('planInfo', {}).get('data', {})
-                        info['plan'] = normalize_plan_name(plan_data.get('planName'))
+                        raw_plan = plan_data.get('planName')
+                        logger.info(f"reactContext planName: {raw_plan}")
+                        info['plan'] = normalize_plan_name(raw_plan)
                         info['next_billing'] = plan_data.get('nextBillingDate')
                         profiles_data = models.get('profiles', {}).get('data', [])
                         info['profiles'] = [pr.get('firstName', pr.get('profileName', 'Profile')) for pr in profiles_data if isinstance(pr, dict)]
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        logger.warning(f"reactContext parse error: {e}")
+
+                # Method 2: Read plan directly from rendered DOM via JavaScript
+                if not info['plan']:
+                    try:
+                        dom_plan = await page.evaluate("""
+                            () => {
+                                // Try Netflix account page selectors
+                                const selectors = [
+                                    '[data-uia="plan-label"]',
+                                    '[data-uia="plan-section-label"]',
+                                    '.account-section-membersince + .account-section .account-section-item b',
+                                    '.planInfo .planName',
+                                    '.accountSectionContent .plan-label',
+                                ];
+                                for (const sel of selectors) {
+                                    const el = document.querySelector(sel);
+                                    if (el && el.textContent.trim()) return el.textContent.trim();
+                                }
+                                // Broader: find any element with plan-related text
+                                const allText = document.body.innerText;
+                                const planPatterns = [
+                                    /Premium\\s*(?:\\(UHD\\)|UHD|4K)?/i,
+                                    /Standard\\s*(?:with\\s*ads|avec\\s*pub|con\\s*anuncios)?/i,
+                                    /Standard\\s*(?:\\(HD\\)|HD)?/i,
+                                    /Basic\\s*(?:with\\s*ads)?/i,
+                                    /Offre\\s+(?:Premium|Standard|Essentiel|Basique)[^\\n]*/i,
+                                ];
+                                // Look in window netflix context if available
+                                try {
+                                    const ctx = window.netflix?.appContext?.state?.models?.planInfo?.data;
+                                    if (ctx?.planName) return ctx.planName;
+                                } catch(e) {}
+                                try {
+                                    const rc = window.netflix?.reactContext?.models?.planInfo?.data;
+                                    if (rc?.planName) return rc.planName;
+                                } catch(e) {}
+                                return null;
+                            }
+                        """)
+                        if dom_plan:
+                            logger.info(f"DOM plan extraction: {dom_plan}")
+                            info['plan'] = normalize_plan_name(dom_plan)
+                    except Exception as e:
+                        logger.warning(f"DOM plan extraction error: {e}")
+
+                # Method 3: Regex for planName in any JSON/script in HTML
+                if not info['plan']:
+                    plan_matches = re.findall(r'"planName"\s*:\s*"([^"]+)"', account_html)
+                    for pm in plan_matches:
+                        normalized = normalize_plan_name(pm)
+                        if normalized:
+                            logger.info(f"JSON regex plan: {pm} -> {normalized}")
+                            info['plan'] = normalized
+                            break
+
+                # Method 4: Simple text search (last resort - better than no plan)
+                if not info['plan']:
+                    for pl in ['Standard with ads', 'Standard avec pub', 'Premium', 'Standard', 'Basic with ads', 'Basic', 'Mobile']:
+                        if pl.lower() in account_html.lower():
+                            info['plan'] = normalize_plan_name(pl)
+                            logger.info(f"Text fallback plan: {pl} -> {info['plan']}")
+                            break
 
                 # Fallback email from account page
                 if not info['email']:
@@ -294,22 +358,6 @@ async def get_browser_data(cookies: dict):
                     if m:
                         info['email'] = m.group(1)
 
-                # Fallback plan - extract from JSON data in page, NOT naive text search
-                if not info['plan']:
-                    # Try to find planName in any JSON/script context
-                    plan_matches = re.findall(r'"planName"\s*:\s*"([^"]+)"', account_html)
-                    for pm in plan_matches:
-                        normalized = normalize_plan_name(pm)
-                        if normalized:
-                            info['plan'] = normalized
-                            break
-                    # Try planSlug
-                    if not info['plan']:
-                        slug_matches = re.findall(r'"(?:planSlug|currentPlanSlug)"\s*:\s*"([^"]+)"', account_html)
-                        for sm in slug_matches:
-                            info['plan'] = normalize_plan_name(sm)
-                            if info['plan']:
-                                break
             except Exception as e:
                 logger.warning(f"Account page error: {e}")
 
