@@ -9,7 +9,7 @@ from pydantic import BaseModel
 from typing import List, Optional
 import uuid
 from datetime import datetime, timezone, timedelta
-import bcrypt
+import secrets
 import jwt
 import httpx
 from bs4 import BeautifulSoup
