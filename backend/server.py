@@ -502,6 +502,26 @@ async def delete_check(check_id: str, user: dict = Depends(get_current_user)):
         raise HTTPException(status_code=404, detail="Check not found")
     return {"message": "Deleted"}
 
+# --- NFToken Route ---
+@api_router.post("/nftoken")
+async def get_nftoken(data: CookieCheckRequest, user: dict = Depends(get_current_user)):
+    """Generate NFToken from cookies"""
+    if data.format_type == "json":
+        cookies = parse_json_cookies(data.cookies_text)
+    elif data.format_type == "netscape":
+        cookies = parse_netscape_cookies(data.cookies_text)
+    else:
+        cookies = parse_cookies_auto(data.cookies_text)
+
+    if not cookies:
+        raise HTTPException(status_code=400, detail="Could not parse cookies")
+
+    success, token, error = await generate_nftoken(cookies)
+    if success:
+        return {"success": True, "nftoken": token, "link": f"https://netflix.com/?nftoken={token}"}
+    else:
+        return {"success": False, "nftoken": None, "error": error}
+
 # --- Admin Routes ---
 @api_router.post("/admin/keys")
 async def create_key(data: KeyCreate, user: dict = Depends(require_admin)):
