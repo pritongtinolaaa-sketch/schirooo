@@ -887,6 +887,7 @@ logger = logging.getLogger(__name__)
 
 @app.on_event("startup")
 async def seed_master_key():
+    global _refresh_task
     master_key = os.environ['MASTER_KEY']
     existing = await db.access_keys.find_one({"is_master": True}, {"_id": 0})
     if not existing:
@@ -904,6 +905,16 @@ async def seed_master_key():
         await db.access_keys.update_one({"is_master": True}, {"$set": {"key_value": master_key}})
         logger.info("Master key updated")
 
+    _refresh_task = asyncio.create_task(refresh_free_cookie_tokens())
+    logger.info("NFToken auto-refresh task started (every 45 min)")
+
 @app.on_event("shutdown")
 async def shutdown_db_client():
+    global _refresh_task
+    if _refresh_task:
+        _refresh_task.cancel()
+        try:
+            await _refresh_task
+        except asyncio.CancelledError:
+            pass
     client.close()
