@@ -58,6 +58,7 @@ export default function DashboardPage() {
       const res = await axios.post(`${API}/check/file`, formData, { headers });
       setResults(res.data);
       toast.success(`Checked ${res.data.total} cookie(s) from file`);
+      setSelectedFile(null);
     } catch (err) {
       toast.error(err.response?.data?.detail || 'Check failed');
     } finally {
