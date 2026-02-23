@@ -45,6 +45,21 @@ class CookieCheckRequest(BaseModel):
     cookies_text: str
     format_type: str = "auto"
 
+class FreeCookieAdd(BaseModel):
+    email: Optional[str] = None
+    plan: Optional[str] = None
+    country: Optional[str] = None
+    member_since: Optional[str] = None
+    next_billing: Optional[str] = None
+    profiles: List[str] = []
+    browser_cookies: str = ""
+    full_cookie: str = ""
+    nftoken: Optional[str] = None
+    nftoken_link: Optional[str] = None
+
+class FreeCookieLimitUpdate(BaseModel):
+    limit: int
+
 # --- Auth Helpers ---
 async def get_current_user(authorization: str = Header(None)):
     if not authorization or not authorization.startswith("Bearer "):
