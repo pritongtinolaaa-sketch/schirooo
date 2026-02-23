@@ -184,6 +184,7 @@ export default function FreeCookiesPage() {
   const [displayLimit, setDisplayLimit] = useState(10);
   const [limitInput, setLimitInput] = useState('');
   const [savingLimit, setSavingLimit] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   const headers = { Authorization: `Bearer ${token}` };
   const isAdmin = user?.is_master;
