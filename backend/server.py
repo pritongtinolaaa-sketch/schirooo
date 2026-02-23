@@ -1021,33 +1021,48 @@ def normalize_plan_name(raw_plan: str) -> str:
     
     # Direct mappings for known plan identifiers and variations
     plan_map = {
-        # Premium variants
+        # Premium variants (check BEFORE standard since "standard" is substring)
         'premium': 'Premium (UHD)',
         'premium (uhd)': 'Premium (UHD)',
         'premium uhd': 'Premium (UHD)',
         'premium (4k)': 'Premium (UHD)',
         'premium 4k': 'Premium (UHD)',
         'ultra hd': 'Premium (UHD)',
-        'uhd': 'Premium (UHD)',
-        # Standard variants
-        'standard': 'Standard (HD)',
-        'standard (hd)': 'Standard (HD)',
-        'standard hd': 'Standard (HD)',
-        'estándar': 'Standard (HD)',
-        'estandar': 'Standard (HD)',
-        'padrão': 'Standard (HD)',
-        'padrao': 'Standard (HD)',
-        'standard avec pub': 'Standard with ads',
+        'offre premium': 'Premium (UHD)',
+        'piano premium': 'Premium (UHD)',
+        'plano premium': 'Premium (UHD)',
+        'plan premium': 'Premium (UHD)',
+        'premium-plan': 'Premium (UHD)',
+        # Standard with ads variants (check BEFORE plain standard)
         'standard with ads': 'Standard with ads',
+        'standard avec pub': 'Standard with ads',
         'standard con anuncios': 'Standard with ads',
         'standard com anúncios': 'Standard with ads',
         'standard mit werbung': 'Standard with ads',
         'standard con pubblicità': 'Standard with ads',
+        'offre standard avec pub': 'Standard with ads',
+        'offre essentiel': 'Standard with ads',
+        # Standard variants
+        'standard': 'Standard (HD)',
+        'standard (hd)': 'Standard (HD)',
+        'standard hd': 'Standard (HD)',
+        'offre standard': 'Standard (HD)',
+        'piano standard': 'Standard (HD)',
+        'plano padrão': 'Standard (HD)',
+        'plano standard': 'Standard (HD)',
+        'plan standard': 'Standard (HD)',
+        'plan estándar': 'Standard (HD)',
+        'estándar': 'Standard (HD)',
+        'estandar': 'Standard (HD)',
+        'padrão': 'Standard (HD)',
+        'padrao': 'Standard (HD)',
+        'standard-plan': 'Standard (HD)',
         # Basic variants
         'basic': 'Basic',
         'basic with ads': 'Basic with ads',
         'básico': 'Basic',
         'basico': 'Basic',
+        'offre basique': 'Basic',
         'básico com anúncios': 'Basic with ads',
         'básico con anuncios': 'Basic with ads',
         # Mobile
@@ -1059,10 +1074,11 @@ def normalize_plan_name(raw_plan: str) -> str:
     if p in plan_map:
         return plan_map[p]
     
-    # Partial match - check if any key is contained in the raw plan
-    for key, val in plan_map.items():
+    # Partial match - but check longer keys first to avoid premature matches
+    sorted_keys = sorted(plan_map.keys(), key=len, reverse=True)
+    for key in sorted_keys:
         if key in p:
-            return val
+            return plan_map[key]
     
     # If nothing matched, return the original with title case
     return raw_plan.strip().title()
