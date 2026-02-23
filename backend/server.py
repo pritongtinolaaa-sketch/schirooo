@@ -284,7 +284,7 @@ async def get_browser_data(cookies: dict):
                             info['email'] = user_info.get('membershipEmail') or user_info.get('email')
                         if not info['country']:
                             info['country'] = user_info.get('countryOfSignup') or user_info.get('currentCountry')
-                        info['member_since'] = user_info.get('memberSince')
+                        info['member_since'] = format_member_since(user_info.get('memberSince'))
                         plan_data = models.get('planInfo', {}).get('data', {})
                         raw_plan = plan_data.get('planName')
                         logger.info(f"reactContext planName: {raw_plan}")
@@ -505,7 +505,7 @@ async def check_netflix_cookie(cookie_text, format_type="auto"):
                                             if not result['country']:
                                                 result['country'] = user_info.get('countryOfSignup') or user_info.get('currentCountry')
                                             if not result['member_since']:
-                                                result['member_since'] = user_info.get('memberSince')
+                                                result['member_since'] = format_member_since(user_info.get('memberSince'))
                                             plan_info = models.get('planInfo', {}).get('data', {})
                                             if not result['plan']:
                                                 result['plan'] = normalize_plan_name(plan_info.get('planName'))
