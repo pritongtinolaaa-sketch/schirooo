@@ -495,6 +495,7 @@ async def check_netflix_cookie(cookie_text, format_type="auto"):
                                     if match:
                                         try:
                                             raw_json = match.group(1)
+                                            raw_json = re.sub(r'\\x([0-9a-fA-F]{2})', lambda m: chr(int(m.group(1), 16)), raw_json)
                                             raw_json = re.sub(r'\\(?!["\\/bfnrtu])', r'\\\\', raw_json)
                                             ctx = json.loads(raw_json)
                                             models = ctx.get('models', {})
