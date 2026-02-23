@@ -39,11 +39,26 @@ export default function CookieResultCard({ result, index }) {
 
   const config = statusConfig[result.status] || statusConfig.invalid;
 
-  const copyFullCookie = () => {
-    navigator.clipboard.writeText(result.full_cookie || '');
-    setCopied(true);
-    toast.success('Cookie copied to clipboard');
-    setTimeout(() => setCopied(false), 2000);
+  const copyFullCookie = async () => {
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(result.full_cookie || '');
+      } else {
+        const textArea = document.createElement('textarea');
+        textArea.value = result.full_cookie || '';
+        textArea.style.position = 'fixed';
+        textArea.style.opacity = '0';
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+      }
+      setCopied(true);
+      toast.success('Cookie copied to clipboard');
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast.error('Copy failed - select text manually');
+    }
   };
 
   const hasInfo = result.email || result.plan || result.member_since || result.country || result.next_billing || (result.profiles && result.profiles.length > 0);
