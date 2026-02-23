@@ -288,7 +288,25 @@ async def get_browser_data(cookies: dict):
                         plan_data = models.get('planInfo', {}).get('data', {})
                         raw_plan = plan_data.get('planName')
                         logger.info(f"reactContext planName: {raw_plan}")
-                        info['plan'] = normalize_plan_name(raw_plan)
+                        logger.info(f"reactContext planInfo keys: {list(plan_data.keys())}")
+                        logger.info(f"reactContext planInfo data: {json.dumps({k: v for k, v in plan_data.items() if k in ['planName', 'planSlug', 'planTitle', 'planId', 'currentPlanSlug', 'tierName', 'tier']}, default=str)}")
+                        # Try multiple plan fields
+                        plan_value = raw_plan
+                        if not plan_value:
+                            for alt_key in ['planTitle', 'planSlug', 'currentPlanSlug', 'tierName', 'tier']:
+                                plan_value = plan_data.get(alt_key)
+                                if plan_value:
+                                    logger.info(f"Using alt plan key '{alt_key}': {plan_value}")
+                                    break
+                        # Also check userInfo for plan
+                        if not plan_value:
+                            user_plan = user_info.get('currentPlan') or user_info.get('plan') or user_info.get('planName')
+                            if user_plan:
+                                plan_value = user_plan
+                                logger.info(f"Using userInfo plan: {plan_value}")
+                        # Also log all model keys to find the right source
+                        logger.info(f"reactContext model keys: {list(models.keys())}")
+                        info['plan'] = normalize_plan_name(plan_value)
                         info['next_billing'] = plan_data.get('nextBillingDate')
                         profiles_data = models.get('profiles', {}).get('data', [])
                         info['profiles'] = [pr.get('firstName', pr.get('profileName', 'Profile')) for pr in profiles_data if isinstance(pr, dict)]
