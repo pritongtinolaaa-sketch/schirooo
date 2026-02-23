@@ -68,8 +68,11 @@ function CopyButton({ text, testId }) {
 }
 
 export default function CookieResultCard({ result, index }) {
+  const { user, token } = useAuth();
   const [cookieOpen, setCookieOpen] = useState(false);
   const [browserCookieOpen, setBrowserCookieOpen] = useState(false);
+  const [addingFree, setAddingFree] = useState(false);
+  const [addedFree, setAddedFree] = useState(false);
 
   const config = statusConfig[result.status] || statusConfig.invalid;
 
