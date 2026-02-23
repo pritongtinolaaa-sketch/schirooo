@@ -1,6 +1,6 @@
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { LayoutDashboard, History, LogOut, Shield, KeyRound } from 'lucide-react';
+import { LayoutDashboard, History, LogOut, Shield, KeyRound, ScrollText } from 'lucide-react';
 
 export default function Navbar() {
   const { user, logout } = useAuth();
@@ -45,16 +45,28 @@ export default function Navbar() {
             History
           </Link>
           {user?.is_master && (
-            <Link
-              to="/admin"
-              data-testid="nav-admin-link"
-              className={`flex items-center gap-2 px-4 py-2 rounded-sm text-sm transition-colors ${
-                isActive('/admin') ? 'text-white bg-white/10' : 'text-primary/70 hover:text-primary hover:bg-white/5'
-              }`}
-            >
-              <KeyRound className="w-4 h-4" />
-              Keys
-            </Link>
+            <>
+              <Link
+                to="/admin"
+                data-testid="nav-admin-link"
+                className={`flex items-center gap-2 px-4 py-2 rounded-sm text-sm transition-colors ${
+                  isActive('/admin') ? 'text-white bg-white/10' : 'text-primary/70 hover:text-primary hover:bg-white/5'
+                }`}
+              >
+                <KeyRound className="w-4 h-4" />
+                Keys
+              </Link>
+              <Link
+                to="/admin/logs"
+                data-testid="nav-logs-link"
+                className={`flex items-center gap-2 px-4 py-2 rounded-sm text-sm transition-colors ${
+                  isActive('/admin/logs') ? 'text-white bg-white/10' : 'text-green-400/70 hover:text-green-400 hover:bg-white/5'
+                }`}
+              >
+                <ScrollText className="w-4 h-4" />
+                Logs
+              </Link>
+            </>
           )}
 
           <div className="w-px h-6 bg-white/10 mx-3" />

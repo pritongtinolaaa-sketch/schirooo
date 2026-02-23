@@ -6,6 +6,7 @@ import AuthPage from "@/pages/AuthPage";
 import DashboardPage from "@/pages/DashboardPage";
 import HistoryPage from "@/pages/HistoryPage";
 import AdminPage from "@/pages/AdminPage";
+import AdminLogsPage from "@/pages/AdminLogsPage";
 import Navbar from "@/components/Navbar";
 
 function ProtectedRoute({ children }) {
@@ -43,6 +44,7 @@ function AppLayout() {
           <Route path="/" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
           <Route path="/history" element={<ProtectedRoute><HistoryPage /></ProtectedRoute>} />
           <Route path="/admin" element={<ProtectedRoute><AdminPage /></ProtectedRoute>} />
+          <Route path="/admin/logs" element={<ProtectedRoute><AdminLogsPage /></ProtectedRoute>} />
           <Route path="/auth" element={<AuthRoute><AuthPage /></AuthRoute>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
