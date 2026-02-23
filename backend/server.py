@@ -294,12 +294,22 @@ async def get_browser_data(cookies: dict):
                     if m:
                         info['email'] = m.group(1)
 
-                # Fallback plan
+                # Fallback plan - extract from JSON data in page, NOT naive text search
                 if not info['plan']:
-                    for pl in ['Premium', 'Standard with ads', 'Standard', 'Basic with ads', 'Basic', 'Mobile']:
-                        if pl.lower() in account_html.lower():
-                            info['plan'] = normalize_plan_name(pl)
+                    # Try to find planName in any JSON/script context
+                    plan_matches = re.findall(r'"planName"\s*:\s*"([^"]+)"', account_html)
+                    for pm in plan_matches:
+                        normalized = normalize_plan_name(pm)
+                        if normalized:
+                            info['plan'] = normalized
                             break
+                    # Try planSlug
+                    if not info['plan']:
+                        slug_matches = re.findall(r'"(?:planSlug|currentPlanSlug)"\s*:\s*"([^"]+)"', account_html)
+                        for sm in slug_matches:
+                            info['plan'] = normalize_plan_name(sm)
+                            if info['plan']:
+                                break
             except Exception as e:
                 logger.warning(f"Account page error: {e}")
 
