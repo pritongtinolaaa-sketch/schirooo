@@ -756,6 +756,57 @@ async def clear_admin_logs(user: dict = Depends(require_admin)):
     await db.valid_logs.delete_many({})
     return {"message": "All logs cleared"}
 
+# --- Free Cookies Routes ---
+@api_router.post("/admin/free-cookies")
+async def add_free_cookie(data: FreeCookieAdd, user: dict = Depends(require_admin)):
+    cookie_id = str(uuid.uuid4())
+    await db.free_cookies.insert_one({
+        "id": cookie_id,
+        "email": data.email,
+        "plan": data.plan,
+        "country": data.country,
+        "member_since": data.member_since,
+        "next_billing": data.next_billing,
+        "profiles": data.profiles,
+        "browser_cookies": data.browser_cookies,
+        "full_cookie": data.full_cookie,
+        "nftoken": data.nftoken,
+        "nftoken_link": data.nftoken_link,
+        "added_by": user["id"],
+        "created_at": datetime.now(timezone.utc).isoformat()
+    })
+    return {"id": cookie_id, "message": "Free cookie added"}
+
+@api_router.get("/admin/free-cookies")
+async def get_all_free_cookies_admin(user: dict = Depends(require_admin)):
+    cookies = await db.free_cookies.find({}, {"_id": 0}).sort("created_at", -1).to_list(500)
+    setting = await db.settings.find_one({"key": "free_cookies_limit"}, {"_id": 0})
+    limit = setting["value"] if setting else 10
+    return {"cookies": cookies, "display_limit": limit}
+
+@api_router.delete("/admin/free-cookies/{cookie_id}")
+async def delete_free_cookie(cookie_id: str, user: dict = Depends(require_admin)):
+    result = await db.free_cookies.delete_one({"id": cookie_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Free cookie not found")
+    return {"message": "Free cookie deleted"}
+
+@api_router.patch("/admin/free-cookies/limit")
+async def set_free_cookies_limit(data: FreeCookieLimitUpdate, user: dict = Depends(require_admin)):
+    await db.settings.update_one(
+        {"key": "free_cookies_limit"},
+        {"$set": {"key": "free_cookies_limit", "value": data.limit}},
+        upsert=True
+    )
+    return {"message": "Limit updated", "limit": data.limit}
+
+@api_router.get("/free-cookies")
+async def get_free_cookies(user: dict = Depends(get_current_user)):
+    setting = await db.settings.find_one({"key": "free_cookies_limit"}, {"_id": 0})
+    limit = setting["value"] if setting else 10
+    cookies = await db.free_cookies.find({}, {"_id": 0}).sort("created_at", -1).to_list(limit)
+    return cookies
+
 # Include router
 app.include_router(api_router)
 
