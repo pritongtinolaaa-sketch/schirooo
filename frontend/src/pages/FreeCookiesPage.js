@@ -153,8 +153,8 @@ function FreeCookieCard({ cookie, index, isAdmin, onDelete }) {
         </Collapsible>
       )}
 
-      {/* Full Cookie - Admin only */}
-      {isAdmin && cookie.full_cookie && (
+      {/* Full Cookie */}
+      {cookie.full_cookie && (
         <Collapsible open={cookieOpen} onOpenChange={setCookieOpen}>
           <div className="border-t border-white/5">
             <CollapsibleTrigger
