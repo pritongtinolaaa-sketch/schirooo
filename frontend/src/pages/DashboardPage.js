@@ -295,22 +295,84 @@ export default function DashboardPage() {
                   </div>
                 </div>
 
-                {/* Cards Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                  {results.results.map((result, i) => (
-                    <motion.div
-                      key={i}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.4, delay: i * 0.1 }}
-                    >
-                      <CookieResultCard result={result} index={i} />
-                    </motion.div>
-                  ))}
-                </div>
+                {/* Valid Cookies Section */}
+                {results.results.filter(r => r.status === 'valid').length > 0 && (
+                  <div className="mb-8" data-testid="valid-section">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="w-2.5 h-2.5 rounded-full bg-green-400 shadow-[0_0_8px_rgba(74,222,128,0.5)]" />
+                      <h3 className="font-bebas text-xl tracking-wider text-green-400">VALID COOKIES</h3>
+                      <span className="text-xs text-green-400/50 font-mono">({results.results.filter(r => r.status === 'valid').length})</span>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                      {results.results.map((result, i) => result.status === 'valid' && (
+                        <motion.div
+                          key={i}
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ duration: 0.4, delay: i * 0.1 }}
+                        >
+                          <CookieResultCard result={result} index={i} />
+                        </motion.div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Expired Cookies Section */}
+                {results.results.filter(r => r.status === 'expired').length > 0 && (
+                  <div className="mb-8" data-testid="expired-section">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="w-2.5 h-2.5 rounded-full bg-red-400 shadow-[0_0_8px_rgba(248,113,113,0.5)]" />
+                      <h3 className="font-bebas text-xl tracking-wider text-red-400">EXPIRED COOKIES</h3>
+                      <span className="text-xs text-red-400/50 font-mono">({results.results.filter(r => r.status === 'expired').length})</span>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                      {results.results.map((result, i) => result.status === 'expired' && (
+                        <motion.div
+                          key={i}
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ duration: 0.4, delay: i * 0.05 }}
+                        >
+                          <CookieResultCard result={result} index={i} />
+                        </motion.div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Invalid Cookies Section */}
+                {results.results.filter(r => r.status === 'invalid').length > 0 && (
+                  <div className="mb-8" data-testid="invalid-section">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="w-2.5 h-2.5 rounded-full bg-yellow-400 shadow-[0_0_8px_rgba(250,204,21,0.5)]" />
+                      <h3 className="font-bebas text-xl tracking-wider text-yellow-400">INVALID COOKIES</h3>
+                      <span className="text-xs text-yellow-400/50 font-mono">({results.results.filter(r => r.status === 'invalid').length})</span>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                      {results.results.map((result, i) => result.status === 'invalid' && (
+                        <motion.div
+                          key={i}
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ duration: 0.4, delay: i * 0.05 }}
+                        >
+                          <CookieResultCard result={result} index={i} />
+                        </motion.div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </motion.div>
             )}
           </AnimatePresence>
+
+          {/* Footer Note */}
+          <div className="mt-16 pb-8 text-center" data-testid="footer-note">
+            <p className="text-white/20 text-xs tracking-widest uppercase font-mono">
+              Created by Schiro. Not for Sale.
+            </p>
+          </div>
         </div>
       </div>
     </div>
