@@ -1,0 +1,134 @@
+{
+  "project_name": "Netflix Cookie Checker",
+  "design_philosophy": {
+    "identity": "The Cinematic Hacker",
+    "vibe": "Immersive, Dark, Dangerous, Precision",
+    "core_principles": [
+      "Cinematic Lighting: Use glows and shadows to create depth, not flat colors.",
+      "Data is Beautiful: The cookie data (JSON) should look like a hacker's terminal.",
+      "Red means Power: Use the Crimson Red sparingly but boldly for primary actions.",
+      "Glass & Steel: Surfaces should feel like dark glass or matte metal."
+    ]
+  },
+  "typography": {
+    "font_family": {
+      "headings": "Bebas Neue, sans-serif",
+      "body": "Manrope, sans-serif",
+      "mono": "JetBrains Mono, monospace"
+    },
+    "installation_instructions": "Add these imports to index.css: @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=JetBrains+Mono:wght@400;500&family=Manrope:wght@300;400;500;600;700&display=swap');",
+    "usage_rules": {
+      "headings": "Use 'Bebas Neue' for all H1-H3. Uppercase, tracking-wide. Class: 'font-bebas uppercase tracking-wider'",
+      "body": "Use 'Manrope' for standard text. Class: 'font-sans'",
+      "code": "Use 'JetBrains Mono' for cookie data, IDs, and technical details. Class: 'font-mono'"
+    }
+  },
+  "colors": {
+    "palette": {
+      "background": "#050505",
+      "foreground": "#FFFFFF",
+      "card": "#0A0A0A",
+      "card_foreground": "#FFFFFF",
+      "primary": "#E50914",
+      "primary_foreground": "#FFFFFF",
+      "secondary": "#1F1F1F",
+      "secondary_foreground": "#E0E0E0",
+      "muted": "#121212",
+      "muted_foreground": "#A3A3A3",
+      "accent": "#B20710",
+      "accent_foreground": "#FFFFFF",
+      "destructive": "#7F1D1D",
+      "destructive_foreground": "#FFFFFF",
+      "border": "#262626",
+      "input": "#262626",
+      "ring": "#E50914"
+    },
+    "gradients": {
+      "hero_overlay": "linear-gradient(to bottom, rgba(5,5,5,0) 0%, #050505 100%)",
+      "red_glow": "radial-gradient(circle at center, rgba(229, 9, 20, 0.15) 0%, rgba(5, 5, 5, 0) 70%)"
+    },
+    "tailwind_config_extension": {
+      "colors": {
+        "netflix": {
+          "red": "#E50914",
+          "dark": "#B20710",
+          "black": "#000000",
+          "off_black": "#141414"
+        }
+      }
+    }
+  },
+  "visual_enhancers": {
+    "glassmorphism": {
+      "default": "bg-black/40 backdrop-blur-xl border border-white/10",
+      "heavy": "bg-black/80 backdrop-blur-2xl border border-white/5",
+      "hover": "hover:bg-white/5 transition-colors duration-300"
+    },
+    "shadows": {
+      "glow": "0 0 20px -5px rgba(229, 9, 20, 0.5)",
+      "card": "0 10px 30px -10px rgba(0, 0, 0, 0.8)"
+    },
+    "borders": {
+      "subtle": "1px solid rgba(255, 255, 255, 0.1)",
+      "active": "1px solid #E50914"
+    }
+  },
+  "layout_strategies": {
+    "page_structure": {
+      "auth_page": "Split screen. Left: Cinematic abstract visual (30547564). Right: Minimalist form.",
+      "dashboard": "Top Nav (Glass). Hero Section (Quick Check). Grid of Cards (Results).",
+      "results_grid": "Responsive grid: grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
+    },
+    "spacing": {
+      "container_padding": "p-6 md:p-12",
+      "section_gap": "gap-8 md:gap-16"
+    }
+  },
+  "components": {
+    "Button": {
+      "styles": {
+        "default": "bg-primary hover:bg-red-700 text-white font-bebas tracking-widest uppercase rounded-sm shadow-[0_0_15px_rgba(229,9,20,0.4)] transition-all hover:scale-105 active:scale-95",
+        "outline": "bg-transparent border border-white/20 hover:border-white text-white font-bebas tracking-widest uppercase rounded-sm hover:bg-white/5",
+        "ghost": "hover:bg-white/10 text-white/80 hover:text-white"
+      }
+    },
+    "Card": {
+      "styles": "bg-black/60 backdrop-blur-md border border-white/10 rounded-md overflow-hidden hover:border-primary/50 transition-colors group relative"
+    },
+    "Input": {
+      "styles": "bg-black/50 border-white/10 focus:border-primary focus:ring-1 focus:ring-primary/50 text-white placeholder:text-white/30 rounded-sm h-12"
+    },
+    "Badge": {
+      "valid": "bg-green-500/20 text-green-400 border border-green-500/30",
+      "expired": "bg-red-500/20 text-red-400 border border-red-500/30",
+      "warning": "bg-yellow-500/20 text-yellow-400 border border-yellow-500/30"
+    }
+  },
+  "image_urls": {
+    "backgrounds": {
+      "hero_abstract": "https://images.pexels.com/photos/30547564/pexels-photo-30547564.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+      "auth_side": "https://images.unsplash.com/photo-1606942257943-dd1859b3e380?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA2MTJ8MHwxfHNlYXJjaHwyfHxhYnN0cmFjdCUyMGRhcmslMjByZWQlMjBibGFjayUyMGRhdGElMjBuZXR3b3JrJTIwY2luZW1hdGljJTIwdGV4dHVyZXxlbnwwfHx8fDE3NzE4NDUxNTR8MA&ixlib=rb-4.1.0&q=85",
+      "hacker_overlay": "https://images.unsplash.com/photo-1669054626218-f0b57b8ec632?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2OTV8MHwxfHNlYXJjaHwyfHxjeWJlcnB1bmslMjBoYWNrZXIlMjBjb21wdXRlciUyMHNjcmVlbiUyMGNvZGUlMjByZWR8ZW58MHx8fHwxNzcxODQ1MTU1fDA&ixlib=rb-4.1.0&q=85"
+    }
+  },
+  "instructions_to_main_agent": [
+    "1. SETUP: Install fonts immediately. Update tailwind.config.js to include the custom colors and font families.",
+    "2. CLEANUP: Delete App.css and index.css content. Replace with the specified CSS variables and Tailwind directives.",
+    "3. AUTH PAGE: Use the 'auth_side' image for the left panel. Make the form on the right minimalist.",
+    "4. DASHBOARD: The main input area should be prominent. Use a large textarea with 'JetBrains Mono' font for cookie pasting.",
+    "5. FILE UPLOAD: Create a drag-and-drop zone that glows red when a file is hovered.",
+    "6. RESULTS: Use the 'Card' component for each cookie. Display status (Valid/Expired) clearly using the Badges.",
+    "7. DETAILS: Inside the card, show Email, Plan, Country, etc. using 'Manrope'. Show the raw cookie in a collapsible section using 'JetBrains Mono'.",
+    "8. MOTION: Use framer-motion. Animate cards entering with a staggered fade-in-up effect.",
+    "9. ICONS: Use 'lucide-react'. Install it if missing.",
+    "10. TOASTS: Use 'sonner' for success/error messages (e.g., 'Cookie Validated', 'Invalid Format').",
+    "11. TABS: Use Shadcn Tabs for switching between 'Paste Cookie' and 'Upload File'."
+  ],
+  "universal_guidelines": [
+    "Do not use gradients for text.",
+    "Avoid pure black (#000000) for cards; use tinted blacks.",
+    "Ensure all interactive elements have hover states.",
+    "Use 'data-testid' for all inputs and buttons.",
+    "Keep the UI responsive. Check mobile view for image heights (max 30vh on mobile)."
+  ]
+}
