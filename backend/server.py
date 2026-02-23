@@ -1066,6 +1066,8 @@ def normalize_plan_name(raw_plan: str) -> str:
     
     # If nothing matched, return the original with title case
     return raw_plan.strip().title()
+
+def parse_cookie_string_to_dict(cookie_str: str) -> dict:
     """Parse 'key1=val1; key2=val2' string into a dict"""
     cookies = {}
     for pair in cookie_str.split(';'):
