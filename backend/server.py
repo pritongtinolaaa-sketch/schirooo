@@ -221,35 +221,53 @@ async def check_netflix_cookie(cookie_text, format_type="auto"):
         }
 
 # --- Auth Routes ---
-@api_router.post("/auth/register")
-async def register(data: UserRegister):
-    existing = await db.users.find_one({"email": data.email}, {"_id": 0})
-    if existing:
-        raise HTTPException(status_code=400, detail="Email already registered")
-
-    user_id = str(uuid.uuid4())
-    await db.users.insert_one({
-        "id": user_id,
-        "username": data.username,
-        "email": data.email,
-        "password_hash": hash_password(data.password),
-        "created_at": datetime.now(timezone.utc).isoformat()
-    })
-    token = create_token(user_id)
-    return {"token": token, "user": {"id": user_id, "username": data.username, "email": data.email}}
-
 @api_router.post("/auth/login")
-async def login(data: UserLogin):
-    user = await db.users.find_one({"email": data.email}, {"_id": 0})
-    if not user or not verify_password(data.password, user["password_hash"]):
-        raise HTTPException(status_code=401, detail="Invalid credentials")
+async def login(data: KeyLogin):
+    key_doc = await db.access_keys.find_one({"key_value": data.key}, {"_id": 0})
+    if not key_doc:
+        raise HTTPException(status_code=401, detail="Invalid access key")
 
-    token = create_token(user["id"])
-    return {"token": token, "user": {"id": user["id"], "username": user["username"], "email": user["email"]}}
+    active = key_doc.get("active_sessions", [])
+    if len(active) >= key_doc.get("max_devices", 1) and not key_doc.get("is_master"):
+        raise HTTPException(status_code=403, detail=f"Device limit reached ({key_doc['max_devices']})")
+
+    session_id = str(uuid.uuid4())
+    token = jwt.encode(
+        {
+            "key_id": key_doc["id"],
+            "session_id": session_id,
+            "is_master": key_doc.get("is_master", False),
+            "exp": datetime.now(timezone.utc) + timedelta(days=7)
+        },
+        JWT_SECRET, algorithm=JWT_ALGORITHM
+    )
+    await db.access_keys.update_one(
+        {"id": key_doc["id"]},
+        {"$push": {"active_sessions": {
+            "session_id": session_id,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }}}
+    )
+    return {
+        "token": token,
+        "user": {
+            "id": key_doc["id"],
+            "label": key_doc["label"],
+            "is_master": key_doc.get("is_master", False)
+        }
+    }
+
+@api_router.post("/auth/logout")
+async def logout(user: dict = Depends(get_current_user)):
+    await db.access_keys.update_one(
+        {"id": user["id"]},
+        {"$pull": {"active_sessions": {"session_id": user["session_id"]}}}
+    )
+    return {"message": "Logged out"}
 
 @api_router.get("/auth/me")
 async def get_me(user: dict = Depends(get_current_user)):
-    return {"id": user["id"], "username": user["username"], "email": user["email"]}
+    return {"id": user["id"], "label": user["label"], "is_master": user["is_master"]}
 
 # --- Cookie Check Routes ---
 @api_router.post("/check")
