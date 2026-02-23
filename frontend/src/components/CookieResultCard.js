@@ -1,8 +1,12 @@
 import { useState } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 import { Badge } from '@/components/ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Mail, CreditCard, Calendar, Globe, Clock, Users, ChevronDown, Copy, Check, AlertCircle, Link2, Key } from 'lucide-react';
+import { Mail, CreditCard, Calendar, Globe, Clock, Users, ChevronDown, Copy, Check, AlertCircle, Link2, Key, Gift, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import axios from 'axios';
+
+const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 const statusConfig = {
   valid: {
