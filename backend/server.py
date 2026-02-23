@@ -30,14 +30,16 @@ app = FastAPI()
 api_router = APIRouter(prefix="/api")
 
 # --- Pydantic Models ---
-class UserRegister(BaseModel):
-    username: str
-    email: str
-    password: str
+class KeyLogin(BaseModel):
+    key: str
 
-class UserLogin(BaseModel):
-    email: str
-    password: str
+class KeyCreate(BaseModel):
+    label: str
+    max_devices: int = 1
+
+class KeyUpdate(BaseModel):
+    label: Optional[str] = None
+    max_devices: Optional[int] = None
 
 class CookieCheckRequest(BaseModel):
     cookies_text: str
