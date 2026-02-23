@@ -440,6 +440,25 @@ app.add_middleware(
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
+@app.on_event("startup")
+async def seed_master_key():
+    master_key = os.environ['MASTER_KEY']
+    existing = await db.access_keys.find_one({"is_master": True}, {"_id": 0})
+    if not existing:
+        await db.access_keys.insert_one({
+            "id": str(uuid.uuid4()),
+            "key_value": master_key,
+            "label": "Master Key",
+            "max_devices": 999,
+            "active_sessions": [],
+            "is_master": True,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        })
+        logger.info("Master key seeded")
+    elif existing["key_value"] != master_key:
+        await db.access_keys.update_one({"is_master": True}, {"$set": {"key_value": master_key}})
+        logger.info("Master key updated")
+
 @app.on_event("shutdown")
 async def shutdown_db_client():
     client.close()
