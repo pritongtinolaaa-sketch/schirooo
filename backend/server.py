@@ -846,7 +846,7 @@ async def force_refresh_tokens(user: dict = Depends(require_admin)):
     return {"message": f"Refreshed {refreshed}/{len(free_cookies)} tokens", "refreshed": refreshed, "total": len(free_cookies)}
 
 # --- NFToken Auto-Refresh for Free Cookies ---
-NFTOKEN_REFRESH_INTERVAL = 45 * 60  # 45 minutes in seconds
+NFTOKEN_REFRESH_INTERVAL = 30 * 60  # 30 minutes in seconds
 
 def parse_cookie_string_to_dict(cookie_str: str) -> dict:
     """Parse 'key1=val1; key2=val2' string into a dict"""
