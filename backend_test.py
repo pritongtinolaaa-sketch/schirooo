@@ -100,6 +100,79 @@ class SchiroCookieCheckerTester:
             200
         )
         return success
+    
+    # Admin Key Management Tests
+    def test_create_key(self, label, max_devices=1):
+        """Test creating new access key (admin only)"""
+        success, response = self.run_test(
+            "Create Access Key",
+            "POST",
+            "admin/keys",
+            200,
+            data={"label": label, "max_devices": max_devices}
+        )
+        if success:
+            print(f"   Created key: {response.get('key_value', 'N/A')}")
+            return response
+        return None
+        
+    def test_list_keys(self):
+        """Test listing all access keys (admin only)"""
+        success, response = self.run_test(
+            "List Access Keys",
+            "GET", 
+            "admin/keys",
+            200
+        )
+        if success:
+            print(f"   Found {len(response)} keys")
+            return response
+        return []
+        
+    def test_reveal_key(self, key_id):
+        """Test revealing full key value (admin only)"""
+        success, response = self.run_test(
+            "Reveal Key Value",
+            "GET",
+            f"admin/keys/{key_id}/reveal",
+            200
+        )
+        if success:
+            print(f"   Full key: {response.get('key_value', 'N/A')}")
+            return response
+        return None
+        
+    def test_delete_key(self, key_id):
+        """Test deleting access key (admin only)"""
+        success, response = self.run_test(
+            "Delete Access Key",
+            "DELETE",
+            f"admin/keys/{key_id}",
+            200
+        )
+        return success
+        
+    def test_revoke_session(self, key_id, session_id):
+        """Test revoking a session (admin only)"""
+        success, response = self.run_test(
+            "Revoke Session",
+            "DELETE",
+            f"admin/keys/{key_id}/sessions/{session_id}",
+            200
+        )
+        return success
+        
+    def test_non_admin_access(self):
+        """Test that non-admin users cannot access admin endpoints"""
+        # Should fail with 403 for non-admin users
+        expected_status = 403 if not self.is_master else 200
+        success, response = self.run_test(
+            "Admin Access Check",
+            "GET",
+            "admin/keys",
+            expected_status
+        )
+        return success
 
     def test_get_me(self):
         """Test getting current user info"""
