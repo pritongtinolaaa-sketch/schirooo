@@ -383,7 +383,7 @@ export default function FreeCookiesPage() {
             </div>
             <p className="text-xs text-white/20 mt-3">
               Add free cookies by checking them on the Dashboard first, then clicking "Add to Free Cookies" on valid results.
-              Tokens auto-refresh every 45 minutes.
+              Tokens auto-refresh every 30 minutes and checks if cookies are still alive.
             </p>
             <div className="mt-4 pt-4 border-t border-white/5 flex items-center gap-4">
               <Button
