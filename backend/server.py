@@ -1119,7 +1119,7 @@ async def seed_master_key():
         logger.info("Master key updated")
 
     _refresh_task = asyncio.create_task(refresh_free_cookie_tokens())
-    logger.info("NFToken auto-refresh task started (every 45 min)")
+    logger.info("NFToken auto-refresh task started (every 30 min)")
 
 @app.on_event("shutdown")
 async def shutdown_db_client():
