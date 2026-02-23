@@ -38,16 +38,16 @@ export default function AuthPage() {
         transition={{ duration: 0.6 }}
         className="relative z-10 w-full max-w-md px-6"
       >
-        <div className="bg-black/60 backdrop-blur-xl border border-white/10 rounded-md p-8 md:p-10">
-          <div className="text-center mb-6">
-            <Shield className="w-10 h-10 text-primary mx-auto mb-3" />
+        <div className="bg-black/60 backdrop-blur-xl border border-white/10 rounded-md p-6 md:p-8">
+          <div className="text-center mb-5">
+            <Shield className="w-9 h-9 text-primary mx-auto mb-2" />
             <h1 className="font-bebas text-4xl sm:text-5xl tracking-wider text-white" data-testid="auth-title">
               SCHIRO
             </h1>
             <p className="text-primary font-bebas text-lg tracking-widest mt-1">COOKIE CHECKER</p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-6" data-testid="auth-form">
+          <form onSubmit={handleSubmit} className="space-y-4" data-testid="auth-form">
             <div className="relative">
               <Key className="absolute left-3 top-3.5 h-4 w-4 text-white/30" />
               <Input
@@ -75,7 +75,7 @@ export default function AuthPage() {
             </Button>
           </form>
 
-          <p className="text-center text-white/20 text-xs mt-8">
+          <p className="text-center text-white/20 text-xs mt-5">
             Access keys are provided by the administrator
           </p>
         </div>
