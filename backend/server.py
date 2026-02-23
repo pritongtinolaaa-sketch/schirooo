@@ -862,6 +862,154 @@ async def force_refresh_tokens(user: dict = Depends(require_admin)):
 
     return {"message": f"Refreshed {refreshed} alive, {dead} dead out of {len(free_cookies)}", "refreshed": refreshed, "dead": dead, "total": len(free_cookies)}
 
+# --- TV Sign-In Code ---
+async def activate_tv_code(cookies: dict, code: str):
+    """Use Playwright to enter a TV sign-in code on netflix.com/tv8"""
+    try:
+        from playwright.async_api import async_playwright
+        async with async_playwright() as p:
+            browser = await p.chromium.launch(
+                headless=True,
+                args=['--no-sandbox', '--disable-dev-shm-usage', '--disable-gpu', '--disable-blink-features=AutomationControlled']
+            )
+            context = await browser.new_context(
+                user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+                viewport={'width': 1920, 'height': 1080},
+                locale='en-US'
+            )
+
+            cookie_list = [{
+                "name": name, "value": value,
+                "domain": ".netflix.com", "path": "/",
+                "secure": True, "sameSite": "None"
+            } for name, value in cookies.items()]
+            await context.add_cookies(cookie_list)
+
+            page = await context.new_page()
+            await page.add_init_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
+
+            # Navigate to TV sign-in page
+            await page.goto("https://www.netflix.com/clearbrowsinghistory/tv8", timeout=25000)
+            await page.wait_for_load_state("domcontentloaded", timeout=15000)
+            await page.wait_for_timeout(2000)
+
+            url = page.url
+            if '/login' in url or '/LoginHelp' in url:
+                await browser.close()
+                return False, "Cookie expired - redirected to login"
+
+            # Try netflix.com/tv8 directly
+            await page.goto("https://www.netflix.com/tv8", timeout=25000)
+            await page.wait_for_load_state("domcontentloaded", timeout=15000)
+            await page.wait_for_timeout(3000)
+
+            url = page.url
+            if '/login' in url or '/LoginHelp' in url:
+                await browser.close()
+                return False, "Cookie expired - redirected to login"
+
+            # Clean the code (remove spaces/dashes)
+            clean_code = code.replace(' ', '').replace('-', '').strip()
+
+            # Try to find and fill the code input
+            filled = False
+
+            # Method 1: Look for individual digit inputs
+            digit_inputs = page.locator('input[type="tel"], input[type="text"], input[type="number"]')
+            count = await digit_inputs.count()
+
+            if count >= len(clean_code):
+                # Multiple individual digit inputs
+                for i, digit in enumerate(clean_code):
+                    if i < count:
+                        await digit_inputs.nth(i).fill(digit)
+                        await page.wait_for_timeout(200)
+                filled = True
+            elif count == 1:
+                # Single input for full code
+                await digit_inputs.first.fill(clean_code)
+                filled = True
+
+            if not filled:
+                # Method 2: Try common selectors
+                for selector in ['input[name="pin"]', 'input[data-uia="pin-input"]', 'input.pin-input', '#code-input', 'input']:
+                    try:
+                        el = page.locator(selector).first
+                        if await el.is_visible(timeout=2000):
+                            await el.fill(clean_code)
+                            filled = True
+                            break
+                    except Exception:
+                        continue
+
+            if not filled:
+                await browser.close()
+                return False, "Could not find code input field on the page"
+
+            await page.wait_for_timeout(1000)
+
+            # Try to submit
+            submitted = False
+            for selector in ['button[type="submit"]', 'button[data-uia="action-button"]', 'button:has-text("Continue")', 'button:has-text("Activate")', 'button:has-text("Next")', 'button:has-text("Sign In")']:
+                try:
+                    btn = page.locator(selector).first
+                    if await btn.is_visible(timeout=2000):
+                        await btn.click()
+                        submitted = True
+                        break
+                except Exception:
+                    continue
+
+            if not submitted:
+                # Try pressing Enter
+                await page.keyboard.press("Enter")
+
+            await page.wait_for_timeout(5000)
+
+            # Check result
+            final_url = page.url
+            page_text = await page.inner_text('body')
+
+            await browser.close()
+
+            # Check for success indicators
+            if any(kw in page_text.lower() for kw in ['success', 'activated', 'signed in', 'enjoy', 'start watching', 'welcome']):
+                return True, "TV device activated successfully!"
+            elif any(kw in page_text.lower() for kw in ['invalid', 'expired', 'incorrect', 'try again', 'error']):
+                return False, "Invalid or expired code. Please try again with a new code from your TV."
+            elif '/browse' in final_url or '/profiles' in final_url:
+                return True, "TV device activated! Code accepted."
+            else:
+                return True, "Code submitted. Check your TV — it should be signed in now."
+
+    except Exception as e:
+        logger.error(f"TV code activation error: {e}")
+        return False, f"Activation failed: {str(e)}"
+
+@api_router.post("/tv-code")
+async def submit_tv_code(data: TVCodeRequest, user: dict = Depends(get_current_user)):
+    """Activate a TV device using a free cookie and a sign-in code"""
+    if not data.code.strip():
+        raise HTTPException(status_code=400, detail="Enter a TV sign-in code")
+
+    # Get the free cookie
+    fc = await db.free_cookies.find_one({"id": data.cookie_id}, {"_id": 0})
+    if not fc:
+        raise HTTPException(status_code=404, detail="Cookie not found")
+
+    # Parse cookies
+    cookies_dict = None
+    if fc.get("browser_cookies"):
+        cookies_dict = parse_cookie_string_to_dict(fc["browser_cookies"])
+    if (not cookies_dict or not cookies_dict.get("NetflixId")) and fc.get("full_cookie"):
+        cookies_dict = parse_cookies_auto(fc["full_cookie"])
+
+    if not cookies_dict:
+        raise HTTPException(status_code=400, detail="Cookie data is invalid")
+
+    success, message = await activate_tv_code(cookies_dict, data.code)
+    return {"success": success, "message": message}
+
 # --- NFToken Auto-Refresh for Free Cookies ---
 NFTOKEN_REFRESH_INTERVAL = 30 * 60  # 30 minutes in seconds
 
