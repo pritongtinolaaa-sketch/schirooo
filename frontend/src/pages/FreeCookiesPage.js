@@ -156,6 +156,41 @@ function FreeCookieCard({ cookie, index, isAdmin, onDelete }) {
         </div>
       )}
 
+      {/* TV Sign-In Code */}
+      {isAlive && (
+        <div className="px-5 py-4 border-t border-white/5">
+          <div className="flex items-center gap-2 mb-3">
+            <Tv className="w-4 h-4 text-blue-400/60" />
+            <span className="text-xs text-white/40 uppercase tracking-wide">Sign In on TV</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Input
+              value={tvCode}
+              onChange={e => setTvCode(e.target.value)}
+              placeholder="Enter TV code (e.g. 12345678)"
+              className="bg-black/50 border-white/10 focus:border-blue-400 text-white placeholder:text-white/20 h-10 font-mono text-sm"
+              data-testid={`tv-code-input-${index}`}
+              disabled={tvLoading}
+              onKeyDown={e => e.key === 'Enter' && handleTvCode()}
+            />
+            <Button
+              onClick={handleTvCode}
+              disabled={tvLoading || !tvCode.trim()}
+              data-testid={`tv-code-submit-${index}`}
+              className="bg-blue-500/15 text-blue-400 border border-blue-500/30 hover:bg-blue-500/25 font-bebas tracking-widest uppercase rounded-sm h-10 px-5 shrink-0"
+            >
+              {tvLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Monitor className="w-4 h-4 mr-1.5" />ACTIVATE</>}
+            </Button>
+          </div>
+          {tvResult && (
+            <div className={`mt-2 text-xs px-3 py-2 rounded ${tvResult.success ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'}`} data-testid={`tv-code-result-${index}`}>
+              {tvResult.message}
+            </div>
+          )}
+          <p className="text-[10px] text-white/15 mt-2">Open Netflix on your TV, select "Sign In" and enter the 8-digit code shown.</p>
+        </div>
+      )}
+
       {/* Browser Cookies - Admin only */}
       {isAdmin && cookie.browser_cookies && (
         <Collapsible open={browserCookieOpen} onOpenChange={setBrowserCookieOpen}>
