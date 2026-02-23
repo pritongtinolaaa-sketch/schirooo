@@ -116,11 +116,22 @@ def parse_cookies_auto(text):
 # --- NFToken Generator (from Netflix GraphQL API) ---
 async def generate_nftoken(cookies: dict):
     """Generate Netflix auto-login token from cookies using Netflix's GraphQL API"""
-    required = ['NetflixId', 'SecureNetflixId', 'nfvdid']
-    missing = [c for c in required if c not in cookies]
-    if missing:
-        return False, None, f"Missing: {', '.join(missing)}"
+    # Normalize cookie names (case-insensitive lookup)
+    norm = {}
+    for k, v in cookies.items():
+        norm[k] = v
+        # Also map lowercase versions
+        norm[k.lower()] = v
 
+    # Build cookie string with original names
+    netflix_id = norm.get('NetflixId') or norm.get('netflixid')
+    secure_id = norm.get('SecureNetflixId') or norm.get('securenetflixid')
+    nfvdid = norm.get('nfvdid')
+
+    if not netflix_id or not secure_id:
+        return False, None, f"Missing required cookies (NetflixId, SecureNetflixId)"
+
+    # Build full cookie string from all available cookies
     cookie_str = '; '.join([f"{k}={v}" for k, v in cookies.items()])
 
     payload = {
