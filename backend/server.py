@@ -492,7 +492,9 @@ async def check_netflix_cookie(cookie_text, format_type="auto"):
                                     match = re.search(r'reactContext\s*=\s*({.*?});', text, re.DOTALL)
                                     if match:
                                         try:
-                                            ctx = json.loads(match.group(1))
+                                            raw_json = match.group(1)
+                                            raw_json = re.sub(r'\\(?!["\\/bfnrtu])', r'\\\\', raw_json)
+                                            ctx = json.loads(raw_json)
                                             models = ctx.get('models', {})
                                             user_info = models.get('userInfo', {}).get('data', {})
                                             if not result['email']:
