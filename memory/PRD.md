@@ -8,71 +8,42 @@ Build a full-stack "Schiro Cookie Checker" application that validates Netflix co
 - **Frontend**: React + Tailwind CSS + shadcn/ui + Framer Motion
 - **Auth**: Key-based JWT authentication with admin master key
 
-## File Structure
-```
-/app/backend/server.py         — All API routes, cookie checking logic, background tasks
-/app/frontend/src/App.js       — Router
-/app/frontend/src/pages/
-  AuthPage.js                  — Key login
-  DashboardPage.js             — Cookie checker UI (results separated by status)
-  HistoryPage.js               — Check history
-  AdminPage.js                 — Key management (admin)
-  AdminLogsPage.js             — Valid cookie logs (admin)
-  FreeCookiesPage.js           — Free cookies (admin manages, users view)
-/app/frontend/src/components/
-  Navbar.js                    — Navigation
-  CookieResultCard.js          — Result display card (has "Add to Free Cookies" for admin)
-/app/frontend/src/contexts/
-  AuthContext.js                — Auth state management
-```
-
 ## Implemented Features
 
 ### Authentication & Admin
-- Key-based login (no email/password)
-- Master admin key: `PritongTinola*3030` (unlimited devices)
-- Admin panel to create/view/delete user keys with device limits
+- Key-based login, master key: `PritongTinola*3030` (unlimited devices)
+- Admin panel for key management with device limits and session revocation
 
 ### Cookie Checker
 - Paste or upload Netflix cookies (Netscape, JSON, key=value)
 - Multi-step validation: Playwright → NFToken → httpx scraping
 - Extracts: email, plan, country, member since, next billing, profiles
-- Generates live NFToken with auto-login link
+- Plan detection: Premium (UHD), Standard (HD), Standard with ads, Basic, Mobile
 - Results separated into Valid/Expired/Invalid sections
 
 ### Admin Logger
-- Valid cookie checks auto-logged to `valid_logs` collection
-- Admin-only page at `/admin/logs`
+- Valid cookie checks auto-logged, admin-only page at `/admin/logs`
 
 ### Free Cookies
-- Admin checks cookies on Dashboard, clicks "Add to Free Cookies" on valid results
-- Free Cookies page at `/free-cookies` visible to all authenticated users
-- Admin controls: display limit, delete, force-refresh tokens
-- Non-admin users see cookie cards (view & copy only)
+- Admin checks cookies, adds valid ones via "Add to Free Cookies" button
+- `/free-cookies` page: admin manages (limit, delete, refresh), users view
+- **Browser cookies & original cookie hidden from non-admin users** (stripped from API + hidden in UI)
+- Non-admin users see: email, plan, country, profiles, nftoken only
 
-### NFToken Auto-Refresh (Feb 2026)
-- Background asyncio task refreshes all free cookie NFTokens every **45 minutes**
-- Parses stored browser_cookies/full_cookie → regenerates NFToken via Netflix GraphQL API
-- Admin can force-refresh immediately via "REFRESH TOKENS NOW" button
-- `last_refreshed` timestamp shown on cookie cards
-- Task starts on server startup, cancels on shutdown
+### NFToken Auto-Refresh
+- Background task refreshes tokens every 45 minutes
+- Admin can force-refresh via "REFRESH TOKENS NOW" button
+- `last_refreshed` timestamp shown on cards
 
 ### UI
-- Dark Netflix-inspired theme
-- Footer: "Created by Schiro. Not for Sale."
-- Framer Motion animations
+- Dark Netflix-inspired theme, footer: "Created by Schiro. Not for Sale."
 
 ## DB Collections
-- `access_keys`: `{id, key_value, label, max_devices, active_sessions[], is_master, created_at}`
-- `checks`: `{id, user_id, results[], total, valid/expired/invalid counts, created_at}`
-- `valid_logs`: `{id, checked_by_key, checked_by_label, email, plan, ..., created_at}`
-- `free_cookies`: `{id, email, plan, country, ..., browser_cookies, full_cookie, nftoken, nftoken_link, added_by, last_refreshed, created_at}`
-- `settings`: `{key: "free_cookies_limit", value: <int>}`
+- `access_keys`, `checks`, `valid_logs`, `free_cookies`, `settings`
 
 ## Critical Notes
-- **DO NOT simplify the cookie checking flow** (Playwright → NFToken → httpx)
-- Master key bypasses device limit check
-- Background refresh task uses `asyncio.create_task` — must be cancelled on shutdown
+- DO NOT simplify cookie checking flow (Playwright → NFToken → httpx)
+- Plan fallback checks specific names first (Premium (UHD) before Premium)
 
 ## Backlog
-- No pending tasks. All user-requested features are implemented.
+- No pending tasks.
