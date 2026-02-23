@@ -312,7 +312,20 @@ export default function FreeCookiesPage() {
             </div>
             <p className="text-xs text-white/20 mt-3">
               Add free cookies by checking them on the Dashboard first, then clicking "Add to Free Cookies" on valid results.
+              Tokens auto-refresh every 45 minutes.
             </p>
+            <div className="mt-4 pt-4 border-t border-white/5 flex items-center gap-4">
+              <Button
+                onClick={refreshTokens}
+                disabled={refreshing || cookies.length === 0}
+                data-testid="refresh-tokens-btn"
+                className="bg-green-500/10 text-green-400 border border-green-500/20 hover:bg-green-500/20 font-bebas tracking-widest uppercase rounded-sm h-10 px-6"
+              >
+                {refreshing ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <RefreshCw className="w-4 h-4 mr-2" />}
+                REFRESH TOKENS NOW
+              </Button>
+              <span className="text-xs text-white/20">Force-refresh all NFTokens immediately</span>
+            </div>
           </motion.div>
         )}
 
