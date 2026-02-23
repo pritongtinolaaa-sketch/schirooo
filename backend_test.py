@@ -62,37 +62,44 @@ class SchiroCookieCheckerTester:
             print(f"❌ Failed - Error: {str(e)}")
             return False, {}
 
-    def test_register(self, username, email, password):
-        """Test user registration"""
+    def test_key_login(self, access_key):
+        """Test user login with access key"""
         success, response = self.run_test(
-            "User Registration",
-            "POST",
-            "auth/register",
-            200,
-            data={"username": username, "email": email, "password": password}
-        )
-        if success and 'token' in response:
-            self.token = response['token']
-            self.user_id = response.get('user', {}).get('id')
-            print(f"   Token obtained: {self.token[:20]}...")
-            return True
-        return False
-
-    def test_login(self, email, password):
-        """Test user login"""
-        success, response = self.run_test(
-            "User Login",
+            "Key-based Login",
             "POST",
             "auth/login",
             200,
-            data={"email": email, "password": password}
+            data={"key": access_key}
         )
         if success and 'token' in response:
             self.token = response['token']
             self.user_id = response.get('user', {}).get('id')
+            self.is_master = response.get('user', {}).get('is_master', False)
             print(f"   Token obtained: {self.token[:20]}...")
+            print(f"   User: {response.get('user', {}).get('label')} (Master: {self.is_master})")
             return True
         return False
+    
+    def test_invalid_key_login(self):
+        """Test login with invalid key"""
+        success, response = self.run_test(
+            "Invalid Key Login",
+            "POST",
+            "auth/login",
+            401,
+            data={"key": "invalid_key_123"}
+        )
+        return success
+        
+    def test_logout(self):
+        """Test logout"""
+        success, response = self.run_test(
+            "User Logout",
+            "POST",
+            "auth/logout",
+            200
+        )
+        return success
 
     def test_get_me(self):
         """Test getting current user info"""
