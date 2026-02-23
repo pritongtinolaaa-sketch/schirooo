@@ -723,6 +723,24 @@ async def revoke_session(key_id: str, session_id: str, user: dict = Depends(requ
     )
     return {"message": "Session revoked"}
 
+# --- Admin Logs Routes ---
+@api_router.get("/admin/logs")
+async def get_admin_logs(user: dict = Depends(require_admin)):
+    logs = await db.valid_logs.find({}, {"_id": 0}).sort("created_at", -1).to_list(500)
+    return logs
+
+@api_router.delete("/admin/logs/{log_id}")
+async def delete_admin_log(log_id: str, user: dict = Depends(require_admin)):
+    result = await db.valid_logs.delete_one({"id": log_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Log not found")
+    return {"message": "Log deleted"}
+
+@api_router.delete("/admin/logs")
+async def clear_admin_logs(user: dict = Depends(require_admin)):
+    await db.valid_logs.delete_many({})
+    return {"message": "All logs cleared"}
+
 # Include router
 app.include_router(api_router)
 
