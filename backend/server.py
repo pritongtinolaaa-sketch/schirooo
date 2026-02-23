@@ -61,6 +61,10 @@ class FreeCookieAdd(BaseModel):
 class FreeCookieLimitUpdate(BaseModel):
     limit: int
 
+class TVCodeRequest(BaseModel):
+    code: str
+    cookie_id: str
+
 # --- Auth Helpers ---
 async def get_current_user(authorization: str = Header(None)):
     if not authorization or not authorization.startswith("Bearer "):
