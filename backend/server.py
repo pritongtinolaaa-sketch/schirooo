@@ -810,7 +810,6 @@ async def get_free_cookies(user: dict = Depends(get_current_user)):
     if not user.get("is_master"):
         for c in cookies:
             c.pop("browser_cookies", None)
-            c.pop("full_cookie", None)
     return cookies
 
 @api_router.post("/admin/free-cookies/refresh")
