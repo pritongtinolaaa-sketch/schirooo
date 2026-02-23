@@ -524,13 +524,20 @@ async def check_netflix_cookie(cookie_text, format_type="auto"):
                                             if not result['member_since']:
                                                 result['member_since'] = format_member_since(user_info.get('memberSince'))
                                             plan_info = models.get('planInfo', {}).get('data', {})
-                                            # Netflix restructured: plan now in accountInfo.experience
                                             account_data = models.get('accountInfo', {}).get('data', {})
+                                            # Plan from maxStreams (most reliable)
+                                            max_streams = account_data.get('maxStreams')
+                                            if max_streams is not None and not result['plan']:
+                                                if max_streams >= 4:
+                                                    result['plan'] = 'Premium (UHD)'
+                                                elif max_streams >= 2:
+                                                    result['plan'] = 'Standard (HD)'
+                                                else:
+                                                    result['plan'] = 'Basic'
                                             if not result['plan']:
                                                 raw_plan = plan_info.get('planName')
-                                                if not raw_plan and account_data.get('experience'):
-                                                    raw_plan = account_data.get('experience')
-                                                result['plan'] = normalize_plan_name(raw_plan)
+                                                if raw_plan:
+                                                    result['plan'] = normalize_plan_name(raw_plan)
                                             if not result['email'] and account_data.get('emailAddress'):
                                                 result['email'] = account_data['emailAddress']
                                             if not result['country'] and account_data.get('country'):
