@@ -477,10 +477,26 @@ async def check_netflix_cookie(cookie_text, format_type="auto"):
                                 if em:
                                     result['email'] = em.group(1)
                             if not result['plan']:
-                                for p in ['Premium (UHD)', 'Standard with ads', 'Standard (HD)', 'Standard', 'Basic with ads', 'Basic', 'Mobile']:
-                                    if p.lower() in html.lower():
-                                        result['plan'] = p
+                                # Try specific patterns first
+                                plan_patterns = [
+                                    r'data-uia="plan-label"[^>]*>([^<]+)',
+                                    r'class="[^"]*planName[^"]*"[^>]*>([^<]+)',
+                                    r'"currentPlanSku"\s*:\s*"([^"]+)"',
+                                    r'"planName"\s*:\s*"([^"]+)"',
+                                    r'"planSlug"\s*:\s*"([^"]+)"',
+                                ]
+                                for pattern in plan_patterns:
+                                    m = re.search(pattern, html, re.IGNORECASE)
+                                    if m:
+                                        result['plan'] = normalize_plan_name(m.group(1))
                                         break
+                                # Last resort context-aware search
+                                if not result['plan']:
+                                    for p in ['Premium', 'Standard with ads', 'Standard', 'Basic with ads', 'Basic', 'Mobile']:
+                                        pattern = rf'(?:your|current|active)\s+plan[^<]*{re.escape(p)}'
+                                        if re.search(pattern, html, re.IGNORECASE):
+                                            result['plan'] = normalize_plan_name(p)
+                                            break
                         elif result["status"] != "valid":
                             result["status"] = "expired"
                             result["error"] = "Cookie expired - redirected to login"
