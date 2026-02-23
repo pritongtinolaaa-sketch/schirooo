@@ -39,8 +39,8 @@ export default function AuthPage() {
         className="relative z-10 w-full max-w-md px-6"
       >
         <div className="bg-black/60 backdrop-blur-xl border border-white/10 rounded-md p-8 md:p-10">
-          <div className="text-center mb-10">
-            <Shield className="w-12 h-12 text-primary mx-auto mb-4" />
+          <div className="text-center mb-6">
+            <Shield className="w-10 h-10 text-primary mx-auto mb-3" />
             <h1 className="font-bebas text-4xl sm:text-5xl tracking-wider text-white" data-testid="auth-title">
               SCHIRO
             </h1>
