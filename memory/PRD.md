@@ -1,36 +1,76 @@
-# Schiro Cookie Checker - PRD
+# Schiro Cookie Checker — PRD
 
 ## Original Problem Statement
-Build a Netflix cookie checker with email, plan, member since, country, next billing date, profiles and the full cookie after checking. Key-based auth where only admin can create keys with device limits.
+Build a full-stack "Schiro Cookie Checker" application that validates Netflix cookies, extracts account details (email, plan, country, profiles, billing), generates live NFTokens, and provides key-based authentication with admin controls.
 
-## Architecture
-- **Frontend**: React 19 + Tailwind CSS + Shadcn UI + Framer Motion
-- **Backend**: FastAPI + MongoDB (Motor async driver)
-- **Auth**: Key-based (JWT sessions, device limits per key)
-- **Cookie Checker**: httpx async + BeautifulSoup4
+## Core Architecture
+- **Backend**: FastAPI + MongoDB (motor) + Playwright for browser automation
+- **Frontend**: React + Tailwind CSS + shadcn/ui + Framer Motion
+- **Auth**: Key-based JWT authentication with admin master key
 
-## What's Been Implemented (Feb 2026)
-### Phase 1 - MVP
-- Cookie checker (paste + file upload, Netscape/JSON formats)
-- Netflix validation via httpx
-- Card-based results (email, plan, member since, country, billing, profiles)
-- Collapsible full cookie view with copy
-- Check history with expand/delete
-- Dark Netflix theme (Bebas Neue, Manrope, JetBrains Mono)
+## File Structure
+```
+/app/backend/server.py         — All API routes and cookie checking logic
+/app/frontend/src/App.js       — Router
+/app/frontend/src/pages/
+  AuthPage.js                  — Key login
+  DashboardPage.js             — Cookie checker UI
+  HistoryPage.js               — Check history
+  AdminPage.js                 — Key management (admin)
+  AdminLogsPage.js             — Valid cookie logs (admin)
+/app/frontend/src/components/
+  Navbar.js                    — Navigation
+  CookieResultCard.js          — Result display card
+/app/frontend/src/contexts/
+  AuthContext.js                — Auth state management
+```
 
-### Phase 2 - Key-Based Auth + Admin
-- Replaced email/password auth with access key system
-- Master key: admin-managed via .env
-- Admin panel at /admin for key management
-- Create/delete/reveal keys, set max device limits
-- Session tracking & revocation per key
-- Renamed to "Schiro Cookie Checker"
+## Implemented Features
 
-## Test Results
-- Backend: 100% (26/26 endpoints)
-- Frontend: 100%
+### Authentication & Admin
+- Key-based login (no email/password)
+- Master admin key: `PritongTinola*3030`
+- Admin panel to create/view/delete user keys with device limits
+- Session management with revoke capability
+
+### Cookie Checker
+- Paste or upload Netflix cookies
+- Multi-format support: Netscape, JSON, key=value
+- Multi-step validation: Playwright → NFToken → httpx scraping
+- Extracts: email, plan, country, member since, next billing, profiles
+- Generates live NFToken with auto-login link
+- Browser-enriched cookies with SecureNetflixId
+- Textarea clears after check
+
+### Results Display (Feb 2026)
+- Results separated into **Valid**, **Expired**, **Invalid** sections with colored headers
+- Each section has glowing status dots (green/red/yellow)
+- Summary bar with counts
+
+### Admin Logger (Feb 2026)
+- All valid cookie checks automatically logged to `valid_logs` collection
+- Admin-only page at `/admin/logs` showing:
+  - Email, plan, country, member since for each valid cookie
+  - Who checked it and when
+  - NFToken with copy button
+  - Expandable browser cookies and original cookie sections
+- Clear all logs / delete individual logs
+- "Logs" nav link visible only to admin
+
+### UI
+- Dark Netflix-inspired theme
+- Footer: "Created by Schiro. Not for Sale."
+- Framer Motion animations
+- Responsive design
+
+## DB Collections
+- `access_keys`: `{id, key_value, label, max_devices, active_sessions[], is_master, created_at}`
+- `checks`: `{id, user_id, results[], total, valid_count, expired_count, invalid_count, created_at}`
+- `valid_logs`: `{id, checked_by_key, checked_by_label, email, plan, country, member_since, next_billing, profiles[], browser_cookies, full_cookie, nftoken, nftoken_link, created_at}`
+
+## Critical Notes
+- **DO NOT simplify the cookie checking flow** (Playwright → NFToken → httpx). This order was designed to bypass Netflix bot detection. Simplifying will re-introduce the "expired cookie" bug.
+- Playwright browser binaries are installed. The binary path is handled in code.
 
 ## Backlog
-- P1: Bulk cookie checking with progress
-- P1: Export results CSV/JSON
-- P2: Dashboard stats (checks, valid rate)
+- No pending tasks. All user-requested features are implemented.
