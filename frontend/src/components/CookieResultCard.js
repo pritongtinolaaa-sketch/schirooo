@@ -158,10 +158,10 @@ export default function CookieResultCard({ result, index }) {
               target="_blank"
               rel="noopener noreferrer"
               data-testid={`nftoken-link-${index}`}
-              className="flex items-center gap-1.5 text-xs text-primary/60 hover:text-primary transition-colors"
+              className="flex items-center justify-center gap-2 mt-2 py-2.5 px-4 rounded-sm text-sm font-bebas tracking-widest uppercase bg-primary/15 text-primary border border-primary/30 hover:bg-primary/25 transition-all hover:scale-[1.01] active:scale-[0.99]"
             >
-              <Link2 className="w-3.5 h-3.5" />
-              Open Netflix with token
+              <Link2 className="w-4 h-4" />
+              Open Netflix with Token
             </a>
           )}
         </div>
