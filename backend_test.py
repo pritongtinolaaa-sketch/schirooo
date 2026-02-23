@@ -1,0 +1,309 @@
+import requests
+import sys
+import json
+from datetime import datetime
+
+class NetflixCookieCheckerTester:
+    def __init__(self, base_url="https://cookie-netflix-scan.preview.emergentagent.com"):
+        self.base_url = base_url
+        self.token = None
+        self.tests_run = 0
+        self.tests_passed = 0
+        self.user_id = None
+
+    def run_test(self, name, method, endpoint, expected_status, data=None, files=None):
+        """Run a single API test"""
+        url = f"{self.base_url}/api/{endpoint}"
+        headers = {'Content-Type': 'application/json'}
+        if self.token:
+            headers['Authorization'] = f'Bearer {self.token}'
+        
+        # Remove content-type for file uploads
+        if files:
+            headers.pop('Content-Type', None)
+
+        self.tests_run += 1
+        print(f"\n🔍 Testing {name}...")
+        print(f"   URL: {url}")
+        
+        try:
+            if method == 'GET':
+                response = requests.get(url, headers=headers, timeout=30)
+            elif method == 'POST':
+                if files:
+                    response = requests.post(url, files=files, headers=headers, timeout=30)
+                else:
+                    response = requests.post(url, json=data, headers=headers, timeout=30)
+            elif method == 'DELETE':
+                response = requests.delete(url, headers=headers, timeout=30)
+
+            success = response.status_code == expected_status
+            if success:
+                self.tests_passed += 1
+                print(f"✅ Passed - Status: {response.status_code}")
+                try:
+                    return True, response.json() if response.content else {}
+                except:
+                    return True, {}
+            else:
+                print(f"❌ Failed - Expected {expected_status}, got {response.status_code}")
+                try:
+                    error_details = response.json()
+                    print(f"   Error: {error_details}")
+                except:
+                    print(f"   Response: {response.text[:200]}")
+                return False, {}
+
+        except requests.exceptions.Timeout:
+            print(f"❌ Failed - Request timed out after 30 seconds")
+            return False, {}
+        except Exception as e:
+            print(f"❌ Failed - Error: {str(e)}")
+            return False, {}
+
+    def test_register(self, username, email, password):
+        """Test user registration"""
+        success, response = self.run_test(
+            "User Registration",
+            "POST",
+            "auth/register",
+            200,
+            data={"username": username, "email": email, "password": password}
+        )
+        if success and 'token' in response:
+            self.token = response['token']
+            self.user_id = response.get('user', {}).get('id')
+            print(f"   Token obtained: {self.token[:20]}...")
+            return True
+        return False
+
+    def test_login(self, email, password):
+        """Test user login"""
+        success, response = self.run_test(
+            "User Login",
+            "POST",
+            "auth/login",
+            200,
+            data={"email": email, "password": password}
+        )
+        if success and 'token' in response:
+            self.token = response['token']
+            self.user_id = response.get('user', {}).get('id')
+            print(f"   Token obtained: {self.token[:20]}...")
+            return True
+        return False
+
+    def test_get_me(self):
+        """Test getting current user info"""
+        success, response = self.run_test(
+            "Get Current User",
+            "GET", 
+            "auth/me",
+            200
+        )
+        if success:
+            print(f"   User info: {response}")
+            return True
+        return False
+
+    def test_check_cookies_paste(self, cookies_text, format_type="auto"):
+        """Test cookie checking via paste"""
+        success, response = self.run_test(
+            "Cookie Check - Paste",
+            "POST",
+            "check", 
+            200,
+            data={"cookies_text": cookies_text, "format_type": format_type}
+        )
+        if success:
+            print(f"   Check results: Total={response.get('total')}, Valid={response.get('valid_count')}, Expired={response.get('expired_count')}, Invalid={response.get('invalid_count')}")
+            return response.get('id')
+        return None
+
+    def test_check_cookies_file(self, file_content):
+        """Test cookie checking via file upload"""
+        # Create a text file in memory
+        files = {'file': ('cookies.txt', file_content, 'text/plain')}
+        
+        success, response = self.run_test(
+            "Cookie Check - File Upload",
+            "POST",
+            "check/file",
+            200,
+            files=files
+        )
+        if success:
+            print(f"   Check results: Total={response.get('total')}, Valid={response.get('valid_count')}, Expired={response.get('expired_count')}, Invalid={response.get('invalid_count')}")
+            return response.get('id')
+        return None
+
+    def test_get_history(self):
+        """Test getting check history"""
+        success, response = self.run_test(
+            "Get Check History",
+            "GET",
+            "history",
+            200
+        )
+        if success:
+            print(f"   History items: {len(response)} checks")
+            return response
+        return []
+
+    def test_delete_history(self, check_id):
+        """Test deleting a check from history"""
+        success, response = self.run_test(
+            "Delete Check",
+            "DELETE",
+            f"history/{check_id}",
+            200
+        )
+        return success
+
+    def test_invalid_auth(self):
+        """Test endpoints without authentication"""
+        old_token = self.token
+        self.token = None
+        
+        # Test protected endpoint without token
+        success, _ = self.run_test(
+            "Protected Endpoint - No Auth",
+            "GET",
+            "auth/me",
+            401
+        )
+        
+        # Test with invalid token
+        self.token = "invalid_token_12345"
+        success2, _ = self.run_test(
+            "Protected Endpoint - Invalid Auth",
+            "GET", 
+            "auth/me",
+            401
+        )
+        
+        self.token = old_token
+        return success and success2
+
+def main():
+    print("🚀 Starting Netflix Cookie Checker API Tests")
+    print("=" * 60)
+    
+    # Setup
+    tester = NetflixCookieCheckerTester()
+    test_user = f"testuser_{datetime.now().strftime('%H%M%S')}"
+    test_email = f"test_{datetime.now().strftime('%H%M%S')}@example.com"
+    test_password = "TestPass123!"
+
+    # Sample cookie data (will be expired/invalid but tests the parsing)
+    sample_cookies = '''# Netscape HTTP Cookie File
+www.netflix.com	TRUE	/	FALSE	1234567890	nftoken	sample_token_value
+www.netflix.com	TRUE	/	FALSE	1234567890	SecureNetflixId	sample_secure_id'''
+
+    sample_json_cookies = '''[
+    {"name": "nftoken", "value": "sample_token", "domain": "netflix.com"},
+    {"name": "SecureNetflixId", "value": "sample_id", "domain": "netflix.com"}
+]'''
+
+    check_ids = []
+
+    try:
+        # Test 1: User Registration
+        print("\n" + "="*50)
+        print("TESTING USER REGISTRATION")
+        print("="*50)
+        if not tester.test_register(test_user, test_email, test_password):
+            print("❌ Registration failed, trying with existing user")
+            # Try login instead
+            if not tester.test_login("test@test.com", "test1234"):
+                print("❌ Both registration and login failed, stopping tests")
+                return 1
+
+        # Test 2: Auth endpoints
+        print("\n" + "="*50)
+        print("TESTING AUTH ENDPOINTS")
+        print("="*50)
+        
+        if not tester.test_get_me():
+            print("❌ Get current user failed")
+            return 1
+
+        # Test 3: Invalid auth
+        print("\n" + "="*50)
+        print("TESTING INVALID AUTH")
+        print("="*50)
+        
+        if not tester.test_invalid_auth():
+            print("❌ Invalid auth tests failed")
+
+        # Test 4: Cookie checking - Paste
+        print("\n" + "="*50)
+        print("TESTING COOKIE CHECKING - PASTE")
+        print("="*50)
+        
+        check_id1 = tester.test_check_cookies_paste(sample_cookies, "netscape")
+        if check_id1:
+            check_ids.append(check_id1)
+
+        check_id2 = tester.test_check_cookies_paste(sample_json_cookies, "json")
+        if check_id2:
+            check_ids.append(check_id2)
+
+        # Test auto format detection
+        check_id3 = tester.test_check_cookies_paste(sample_cookies, "auto")
+        if check_id3:
+            check_ids.append(check_id3)
+
+        # Test 5: Cookie checking - File upload
+        print("\n" + "="*50)
+        print("TESTING COOKIE CHECKING - FILE UPLOAD")
+        print("="*50)
+        
+        check_id4 = tester.test_check_cookies_file(sample_cookies)
+        if check_id4:
+            check_ids.append(check_id4)
+
+        # Test 6: History endpoints
+        print("\n" + "="*50)
+        print("TESTING HISTORY ENDPOINTS")  
+        print("="*50)
+        
+        history = tester.test_get_history()
+        
+        # Test delete if we have check IDs
+        if check_ids:
+            tester.test_delete_history(check_ids[0])
+
+        # Test 7: Error cases
+        print("\n" + "="*50)
+        print("TESTING ERROR CASES")
+        print("="*50)
+        
+        # Empty cookie text
+        tester.run_test("Empty Cookies", "POST", "check", 400, 
+                       data={"cookies_text": "", "format_type": "auto"})
+        
+        # Delete non-existent check
+        tester.run_test("Delete Non-existent Check", "DELETE", "history/fake-id", 404)
+
+    except Exception as e:
+        print(f"\n❌ Test execution failed: {str(e)}")
+        return 1
+
+    # Print final results
+    print("\n" + "="*60)
+    print("🏁 TEST RESULTS")
+    print("="*60)
+    print(f"📊 Tests passed: {tester.tests_passed}/{tester.tests_run}")
+    success_rate = (tester.tests_passed / tester.tests_run * 100) if tester.tests_run > 0 else 0
+    print(f"📈 Success rate: {success_rate:.1f}%")
+    
+    if tester.tests_passed == tester.tests_run:
+        print("🎉 All tests passed!")
+        return 0
+    else:
+        print(f"❌ {tester.tests_run - tester.tests_passed} tests failed")
+        return 1
+
+if __name__ == "__main__":
+    sys.exit(main())
