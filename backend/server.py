@@ -806,6 +806,11 @@ async def get_free_cookies(user: dict = Depends(get_current_user)):
     setting = await db.settings.find_one({"key": "free_cookies_limit"}, {"_id": 0})
     limit = setting["value"] if setting else 10
     cookies = await db.free_cookies.find({}, {"_id": 0}).sort("created_at", -1).to_list(limit)
+    # Strip sensitive cookie data for non-admin users
+    if not user.get("is_master"):
+        for c in cookies:
+            c.pop("browser_cookies", None)
+            c.pop("full_cookie", None)
     return cookies
 
 @api_router.post("/admin/free-cookies/refresh")
