@@ -126,8 +126,8 @@ function FreeCookieCard({ cookie, index, isAdmin, onDelete }) {
         </div>
       )}
 
-      {/* Browser Cookies */}
-      {cookie.browser_cookies && (
+      {/* Browser Cookies - Admin only */}
+      {isAdmin && cookie.browser_cookies && (
         <Collapsible open={browserCookieOpen} onOpenChange={setBrowserCookieOpen}>
           <div className="border-t border-white/5">
             <CollapsibleTrigger
@@ -153,8 +153,8 @@ function FreeCookieCard({ cookie, index, isAdmin, onDelete }) {
         </Collapsible>
       )}
 
-      {/* Full Cookie */}
-      {cookie.full_cookie && (
+      {/* Full Cookie - Admin only */}
+      {isAdmin && cookie.full_cookie && (
         <Collapsible open={cookieOpen} onOpenChange={setCookieOpen}>
           <div className="border-t border-white/5">
             <CollapsibleTrigger
