@@ -167,6 +167,30 @@ export default function CookieResultCard({ result, index }) {
         </div>
       )}
 
+      {/* Add to Free Cookies (Admin only, Valid only) */}
+      {user?.is_master && result.status === 'valid' && (
+        <div className="px-5 py-3 border-t border-white/5">
+          <button
+            onClick={handleAddToFree}
+            disabled={addingFree || addedFree}
+            data-testid={`add-free-cookie-${index}`}
+            className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-sm text-sm font-bebas tracking-widest uppercase transition-all ${
+              addedFree
+                ? 'bg-green-500/10 text-green-400 border border-green-500/20 cursor-default'
+                : 'bg-green-500/10 text-green-400 border border-green-500/20 hover:bg-green-500/20 hover:scale-[1.01] active:scale-[0.99]'
+            }`}
+          >
+            {addingFree ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : addedFree ? (
+              <><Check className="w-4 h-4" />ADDED TO FREE COOKIES</>
+            ) : (
+              <><Gift className="w-4 h-4" />ADD TO FREE COOKIES</>
+            )}
+          </button>
+        </div>
+      )}
+
       {/* Browser Cookies - Collapsible */}
       {result.browser_cookies && (
         <Collapsible open={browserCookieOpen} onOpenChange={setBrowserCookieOpen}>
