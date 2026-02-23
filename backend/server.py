@@ -522,8 +522,17 @@ async def check_netflix_cookie(cookie_text, format_type="auto"):
                                             if not result['member_since']:
                                                 result['member_since'] = format_member_since(user_info.get('memberSince'))
                                             plan_info = models.get('planInfo', {}).get('data', {})
+                                            # Netflix restructured: plan now in accountInfo.experience
+                                            account_data = models.get('accountInfo', {}).get('data', {})
                                             if not result['plan']:
-                                                result['plan'] = normalize_plan_name(plan_info.get('planName'))
+                                                raw_plan = plan_info.get('planName')
+                                                if not raw_plan and account_data.get('experience'):
+                                                    raw_plan = account_data.get('experience')
+                                                result['plan'] = normalize_plan_name(raw_plan)
+                                            if not result['email'] and account_data.get('emailAddress'):
+                                                result['email'] = account_data['emailAddress']
+                                            if not result['country'] and account_data.get('country'):
+                                                result['country'] = account_data['country']
                                             if not result['next_billing']:
                                                 result['next_billing'] = plan_info.get('nextBillingDate')
                                             if not result['profiles']:
