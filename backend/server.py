@@ -330,19 +330,26 @@ async def check_netflix_cookie(cookie_text, format_type="auto"):
     except Exception as e:
         logger.warning(f"Playwright failed: {e}")
 
-    # STEP 2: Generate NFToken using BROWSER cookies (they have SecureNetflixId etc.)
-    nftoken_cookies = browser_cookies_dict if browser_cookies_dict else cookies
-    try:
-        success, nft, nft_err = await generate_nftoken(nftoken_cookies)
-        if success and nft:
-            result["status"] = "valid"
-            result["nftoken"] = nft
-            result["nftoken_link"] = f"https://netflix.com/?nftoken={nft}"
-            logger.info("NFToken: SUCCESS")
-        else:
-            logger.info(f"NFToken failed: {nft_err}")
-    except Exception as e:
-        logger.warning(f"NFToken error: {e}")
+    # STEP 2: Generate NFToken using BROWSER cookies first, then original cookies as fallback
+    # Browser cookies have fresh SecureNetflixId etc. from the session
+    nftoken_attempts = []
+    if browser_cookies_dict:
+        nftoken_attempts.append(("browser", browser_cookies_dict))
+    nftoken_attempts.append(("original", cookies))
+
+    for source, nft_cookies in nftoken_attempts:
+        try:
+            success, nft, nft_err = await generate_nftoken(nft_cookies)
+            if success and nft:
+                result["status"] = "valid"
+                result["nftoken"] = nft
+                result["nftoken_link"] = f"https://netflix.com/?nftoken={nft}"
+                logger.info(f"NFToken: SUCCESS (from {source} cookies)")
+                break
+            else:
+                logger.info(f"NFToken ({source}): {nft_err}")
+        except Exception as e:
+            logger.warning(f"NFToken ({source}) error: {e}")
 
     # STEP 3: httpx fallback for account info if Playwright didn't get it
     if result["status"] != "valid" or not result["email"]:
