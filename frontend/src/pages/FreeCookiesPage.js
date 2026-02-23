@@ -246,6 +246,19 @@ export default function FreeCookiesPage() {
     }
   };
 
+  const refreshTokens = async () => {
+    setRefreshing(true);
+    try {
+      const res = await axios.post(`${API}/admin/free-cookies/refresh`, {}, { headers });
+      toast.success(res.data.message);
+      fetchAdminCookies();
+    } catch {
+      toast.error('Failed to refresh tokens');
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#050505]">
       <div className="max-w-5xl mx-auto px-6 py-12 md:py-20">
