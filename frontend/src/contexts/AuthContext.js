@@ -6,7 +6,7 @@ const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
-  const [token, setToken] = useState(localStorage.getItem('nftoken'));
+  const [token, setToken] = useState(localStorage.getItem('schiro_token'));
   const [loading, setLoading] = useState(true);
 
   const validateToken = useCallback(async () => {
@@ -17,7 +17,7 @@ export function AuthProvider({ children }) {
       });
       setUser(res.data);
     } catch {
-      localStorage.removeItem('nftoken');
+      localStorage.removeItem('schiro_token');
       setToken(null);
       setUser(null);
     } finally {
@@ -27,30 +27,29 @@ export function AuthProvider({ children }) {
 
   useEffect(() => { validateToken(); }, [validateToken]);
 
-  const login = async (email, password) => {
-    const res = await axios.post(`${API}/auth/login`, { email, password });
-    localStorage.setItem('nftoken', res.data.token);
+  const login = async (key) => {
+    const res = await axios.post(`${API}/auth/login`, { key });
+    localStorage.setItem('schiro_token', res.data.token);
     setToken(res.data.token);
     setUser(res.data.user);
     return res.data;
   };
 
-  const register = async (username, email, password) => {
-    const res = await axios.post(`${API}/auth/register`, { username, email, password });
-    localStorage.setItem('nftoken', res.data.token);
-    setToken(res.data.token);
-    setUser(res.data.user);
-    return res.data;
-  };
-
-  const logout = () => {
-    localStorage.removeItem('nftoken');
+  const logout = async () => {
+    try {
+      if (token) {
+        await axios.post(`${API}/auth/logout`, {}, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+      }
+    } catch { /* ignore */ }
+    localStorage.removeItem('schiro_token');
     setToken(null);
     setUser(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, loading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, token, loading, login, logout }}>
       {children}
     </AuthContext.Provider>
   );
