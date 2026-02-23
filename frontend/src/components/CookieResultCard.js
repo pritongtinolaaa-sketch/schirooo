@@ -78,6 +78,30 @@ export default function CookieResultCard({ result, index }) {
 
   const hasInfo = result.email || result.plan || result.member_since || result.country || result.next_billing || (result.profiles && result.profiles.length > 0);
 
+  const handleAddToFree = async () => {
+    setAddingFree(true);
+    try {
+      await axios.post(`${API}/admin/free-cookies`, {
+        email: result.email,
+        plan: result.plan,
+        country: result.country,
+        member_since: result.member_since,
+        next_billing: result.next_billing,
+        profiles: result.profiles || [],
+        browser_cookies: result.browser_cookies || '',
+        full_cookie: result.full_cookie || '',
+        nftoken: result.nftoken,
+        nftoken_link: result.nftoken_link,
+      }, { headers: { Authorization: `Bearer ${token}` } });
+      setAddedFree(true);
+      toast.success('Added to Free Cookies');
+    } catch {
+      toast.error('Failed to add to Free Cookies');
+    } finally {
+      setAddingFree(false);
+    }
+  };
+
   return (
     <div
       data-testid={`cookie-result-card-${index}`}
