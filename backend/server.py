@@ -46,32 +46,35 @@ class CookieCheckRequest(BaseModel):
     format_type: str = "auto"
 
 # --- Auth Helpers ---
-def hash_password(password: str) -> str:
-    return bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
-
-def verify_password(password: str, hashed: str) -> bool:
-    return bcrypt.checkpw(password.encode(), hashed.encode())
-
-def create_token(user_id: str) -> str:
-    return jwt.encode(
-        {"user_id": user_id, "exp": datetime.now(timezone.utc) + timedelta(days=7)},
-        JWT_SECRET, algorithm=JWT_ALGORITHM
-    )
-
 async def get_current_user(authorization: str = Header(None)):
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Not authenticated")
-    token = authorization.split(" ")[1]
+    token_str = authorization.split(" ")[1]
     try:
-        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
-        user = await db.users.find_one({"id": payload["user_id"]}, {"_id": 0, "password_hash": 0})
-        if not user:
-            raise HTTPException(status_code=401, detail="User not found")
-        return user
+        payload = jwt.decode(token_str, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        key_doc = await db.access_keys.find_one({"id": payload["key_id"]}, {"_id": 0})
+        if not key_doc:
+            raise HTTPException(status_code=401, detail="Key not found")
+        session_id = payload.get("session_id")
+        active = key_doc.get("active_sessions", [])
+        if not any(s["session_id"] == session_id for s in active):
+            raise HTTPException(status_code=401, detail="Session revoked")
+        return {
+            "id": key_doc["id"],
+            "label": key_doc["label"],
+            "is_master": key_doc.get("is_master", False),
+            "session_id": session_id
+        }
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="Token expired")
     except jwt.InvalidTokenError:
         raise HTTPException(status_code=401, detail="Invalid token")
+
+async def require_admin(authorization: str = Header(None)):
+    user = await get_current_user(authorization)
+    if not user.get("is_master"):
+        raise HTTPException(status_code=403, detail="Admin access required")
+    return user
 
 # --- Cookie Parsing ---
 def parse_netscape_cookies(text):
