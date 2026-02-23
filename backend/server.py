@@ -294,30 +294,12 @@ async def get_browser_data(cookies: dict):
                     if m:
                         info['email'] = m.group(1)
 
-                # Fallback plan - look for plan indicator patterns in account page
+                # Fallback plan
                 if not info['plan']:
-                    # Try to find current plan in specific sections (not the comparison table)
-                    current_plan_patterns = [
-                        r'data-uia="plan-label"[^>]*>([^<]+)',
-                        r'class="[^"]*planName[^"]*"[^>]*>([^<]+)',
-                        r'class="[^"]*currentPlan[^"]*"[^>]*>([^<]+)',
-                        r'"currentPlanSku"\s*:\s*"([^"]+)"',
-                        r'"planName"\s*:\s*"([^"]+)"',
-                        r'"planSlug"\s*:\s*"([^"]+)"',
-                    ]
-                    for pattern in current_plan_patterns:
-                        m = re.search(pattern, account_html, re.IGNORECASE)
-                        if m:
-                            info['plan'] = normalize_plan_name(m.group(1))
+                    for pl in ['Premium', 'Standard with ads', 'Standard', 'Basic with ads', 'Basic', 'Mobile']:
+                        if pl.lower() in account_html.lower():
+                            info['plan'] = normalize_plan_name(pl)
                             break
-                    # Last resort: search HTML for plan names but be stricter
-                    if not info['plan']:
-                        for pl in ['Premium', 'Standard with ads', 'Standard', 'Basic with ads', 'Basic', 'Mobile']:
-                            # Look for the plan name near "your plan" or "current plan" context
-                            pattern = rf'(?:your|current|active)\s+plan[^<]*{re.escape(pl)}'
-                            if re.search(pattern, account_html, re.IGNORECASE):
-                                info['plan'] = normalize_plan_name(pl)
-                                break
             except Exception as e:
                 logger.warning(f"Account page error: {e}")
 
@@ -477,26 +459,10 @@ async def check_netflix_cookie(cookie_text, format_type="auto"):
                                 if em:
                                     result['email'] = em.group(1)
                             if not result['plan']:
-                                # Try specific patterns first
-                                plan_patterns = [
-                                    r'data-uia="plan-label"[^>]*>([^<]+)',
-                                    r'class="[^"]*planName[^"]*"[^>]*>([^<]+)',
-                                    r'"currentPlanSku"\s*:\s*"([^"]+)"',
-                                    r'"planName"\s*:\s*"([^"]+)"',
-                                    r'"planSlug"\s*:\s*"([^"]+)"',
-                                ]
-                                for pattern in plan_patterns:
-                                    m = re.search(pattern, html, re.IGNORECASE)
-                                    if m:
-                                        result['plan'] = normalize_plan_name(m.group(1))
+                                for p in ['Premium', 'Standard with ads', 'Standard', 'Basic with ads', 'Basic', 'Mobile']:
+                                    if p.lower() in html.lower():
+                                        result['plan'] = normalize_plan_name(p)
                                         break
-                                # Last resort context-aware search
-                                if not result['plan']:
-                                    for p in ['Premium', 'Standard with ads', 'Standard', 'Basic with ads', 'Basic', 'Mobile']:
-                                        pattern = rf'(?:your|current|active)\s+plan[^<]*{re.escape(p)}'
-                                        if re.search(pattern, html, re.IGNORECASE):
-                                            result['plan'] = normalize_plan_name(p)
-                                            break
                         elif result["status"] != "valid":
                             result["status"] = "expired"
                             result["error"] = "Cookie expired - redirected to login"
