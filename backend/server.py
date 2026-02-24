@@ -37,6 +37,7 @@ class KeyLogin(BaseModel):
 class KeyCreate(BaseModel):
     label: str
     max_devices: int = 1
+    custom_key: Optional[str] = None
 
 class KeyUpdate(BaseModel):
     label: Optional[str] = None
@@ -793,7 +794,13 @@ async def get_nftoken(data: CookieCheckRequest, user: dict = Depends(get_current
 # --- Admin Routes ---
 @api_router.post("/admin/keys")
 async def create_key(data: KeyCreate, user: dict = Depends(require_admin)):
-    key_value = secrets.token_urlsafe(16)
+    if data.custom_key and data.custom_key.strip():
+        key_value = data.custom_key.strip()
+        existing = await db.access_keys.find_one({"key_value": key_value}, {"_id": 0})
+        if existing:
+            raise HTTPException(status_code=400, detail="Key already exists")
+    else:
+        key_value = secrets.token_urlsafe(16)
     key_id = str(uuid.uuid4())
     await db.access_keys.insert_one({
         "id": key_id,
