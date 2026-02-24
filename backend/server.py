@@ -1194,7 +1194,7 @@ async def submit_tv_code(data: TVCodeRequest, user: dict = Depends(get_current_u
     return {"success": success, "message": message}
 
 # --- NFToken Auto-Refresh for Free Cookies ---
-NFTOKEN_REFRESH_INTERVAL = 30 * 60  # 30 minutes in seconds
+NFTOKEN_REFRESH_INTERVAL = 10 * 60  # 10 minutes in seconds
 
 # Month name translations to English
 MONTH_MAP = {
