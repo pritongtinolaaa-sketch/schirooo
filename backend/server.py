@@ -756,6 +756,74 @@ async def check_cookies_file(file: UploadFile = File(...), user: dict = Depends(
         "invalid_count": invalid_count
     }
 
+
+@api_router.post("/check/files")
+async def check_cookies_files(files: List[UploadFile] = File(...), user: dict = Depends(get_current_user)):
+    all_cookie_blocks = []
+    filenames = []
+
+    for file in files:
+        content = await file.read()
+        text = content.decode('utf-8', errors='ignore')
+        cookie_blocks = re.split(r'\n{3,}|={5,}|-{5,}', text.strip())
+        cookie_blocks = [b.strip() for b in cookie_blocks if b.strip()]
+        all_cookie_blocks.extend(cookie_blocks)
+        filenames.append(file.filename)
+
+    if not all_cookie_blocks:
+        raise HTTPException(status_code=400, detail="No cookies found in uploaded files")
+
+    results = []
+    for block in all_cookie_blocks:
+        result = await check_netflix_cookie(block, "auto")
+        results.append(result)
+
+    check_id = str(uuid.uuid4())
+    valid_count = sum(1 for r in results if r["status"] == "valid")
+    expired_count = sum(1 for r in results if r["status"] == "expired")
+    invalid_count = sum(1 for r in results if r["status"] == "invalid")
+
+    await db.checks.insert_one({
+        "id": check_id,
+        "user_id": user["id"],
+        "results": results,
+        "total": len(results),
+        "valid_count": valid_count,
+        "expired_count": expired_count,
+        "invalid_count": invalid_count,
+        "filename": ", ".join(filenames),
+        "created_at": datetime.now(timezone.utc).isoformat()
+    })
+
+    for r in results:
+        if r["status"] == "valid":
+            await db.valid_logs.insert_one({
+                "id": str(uuid.uuid4()),
+                "checked_by_key": user["id"],
+                "checked_by_label": user["label"],
+                "email": r.get("email"),
+                "plan": r.get("plan"),
+                "country": r.get("country"),
+                "member_since": r.get("member_since"),
+                "next_billing": r.get("next_billing"),
+                "profiles": r.get("profiles", []),
+                "browser_cookies": r.get("browser_cookies", ""),
+                "full_cookie": r.get("full_cookie", ""),
+                "nftoken": r.get("nftoken"),
+                "nftoken_link": r.get("nftoken_link"),
+                "created_at": datetime.now(timezone.utc).isoformat()
+            })
+
+    return {
+        "id": check_id,
+        "results": results,
+        "total": len(results),
+        "valid_count": valid_count,
+        "expired_count": expired_count,
+        "invalid_count": invalid_count,
+        "filenames": filenames
+    }
+
 # --- History Routes ---
 @api_router.get("/history")
 async def get_history(user: dict = Depends(get_current_user)):
