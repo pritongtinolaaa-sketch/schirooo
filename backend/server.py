@@ -1308,7 +1308,7 @@ def parse_cookie_string_to_dict(cookie_str: str) -> dict:
     return cookies
 
 async def refresh_free_cookie_tokens():
-    """Background task that refreshes NFTokens for all free cookies every 30 minutes and checks if alive"""
+    """Background task that refreshes NFTokens for all free cookies every 10 minutes and checks if alive"""
     while True:
         try:
             await asyncio.sleep(NFTOKEN_REFRESH_INTERVAL)
@@ -1403,7 +1403,7 @@ async def seed_master_key():
         logger.info("Master key updated")
 
     _refresh_task = asyncio.create_task(refresh_free_cookie_tokens())
-    logger.info("NFToken auto-refresh task started (every 30 min)")
+    logger.info("NFToken auto-refresh task started (every 10 min)")
 
 @app.on_event("shutdown")
 async def shutdown_db_client():
