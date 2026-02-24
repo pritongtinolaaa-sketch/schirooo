@@ -127,7 +127,7 @@ export default function DashboardPage() {
           background: 'radial-gradient(ellipse at top center, rgba(229,9,20,0.08) 0%, transparent 60%)',
         }}
       >
-        <div className="max-w-5xl mx-auto px-6 py-12 md:py-20">
+        <div className="max-w-5xl mx-auto px-6 py-6 md:py-10">
           {/* Title */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}

@@ -332,7 +332,7 @@ export default function FreeCookiesPage() {
 
   return (
     <div className="min-h-screen bg-[#050505]">
-      <div className="max-w-5xl mx-auto px-6 py-12 md:py-20">
+      <div className="max-w-5xl mx-auto px-6 py-6 md:py-10">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
           <div className="flex items-center gap-4 mb-10">
             <Gift className="w-7 h-7 text-green-400" />
