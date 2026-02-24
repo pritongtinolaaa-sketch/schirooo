@@ -46,19 +46,26 @@ export default function DashboardPage() {
   };
 
   const handleCheckFile = async () => {
-    if (!selectedFile) {
-      toast.error('Select a file first');
+    if (selectedFiles.length === 0) {
+      toast.error('Select at least one file first');
       return;
     }
     setChecking(true);
     setResults(null);
     try {
       const formData = new FormData();
-      formData.append('file', selectedFile);
-      const res = await axios.post(`${API}/check/file`, formData, { headers });
-      setResults(res.data);
-      toast.success(`Checked ${res.data.total} cookie(s) from file`);
-      setSelectedFile(null);
+      if (selectedFiles.length === 1) {
+        formData.append('file', selectedFiles[0]);
+        const res = await axios.post(`${API}/check/file`, formData, { headers });
+        setResults(res.data);
+        toast.success(`Checked ${res.data.total} cookie(s) from file`);
+      } else {
+        selectedFiles.forEach(f => formData.append('files', f));
+        const res = await axios.post(`${API}/check/files`, formData, { headers });
+        setResults(res.data);
+        toast.success(`Checked ${res.data.total} cookie(s) from ${selectedFiles.length} files`);
+      }
+      setSelectedFiles([]);
     } catch (err) {
       toast.error(err.response?.data?.detail || 'Check failed');
     } finally {
