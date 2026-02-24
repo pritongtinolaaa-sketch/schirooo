@@ -49,3 +49,6 @@ Build a full-stack "Schiro Cookie Checker" application that validates Netflix co
 
 ## Backlog
 - No pending tasks.
+
+## Changelog
+- **Feb 2026**: Implemented bulk file upload — users can now select and upload multiple .txt/.json files at once from the file picker. Backend `/api/check/files` endpoint processes all cookies from all files combined. Frontend shows individual file names with remove buttons and dynamic button label.
