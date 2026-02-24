@@ -731,55 +731,29 @@ async def check_cookies_file(file: UploadFile = File(...), user: dict = Depends(
     if not cookie_blocks:
         raise HTTPException(status_code=400, detail="No cookies found in file")
 
-    results = []
-    for block in cookie_blocks:
-        result = await check_netflix_cookie(block, "auto")
-        results.append(result)
-
     check_id = str(uuid.uuid4())
-    valid_count = sum(1 for r in results if r["status"] == "valid")
-    expired_count = sum(1 for r in results if r["status"] == "expired")
-    invalid_count = sum(1 for r in results if r["status"] == "invalid")
+    total = len(cookie_blocks)
 
     await db.checks.insert_one({
         "id": check_id,
         "user_id": user["id"],
-        "results": results,
-        "total": len(results),
-        "valid_count": valid_count,
-        "expired_count": expired_count,
-        "invalid_count": invalid_count,
+        "results": [],
+        "total": total,
+        "checked_count": 0,
+        "valid_count": 0,
+        "expired_count": 0,
+        "invalid_count": 0,
+        "status": "processing",
         "filename": file.filename,
         "created_at": datetime.now(timezone.utc).isoformat()
     })
 
-    # Log valid cookies to admin log
-    for r in results:
-        if r["status"] == "valid":
-            await db.valid_logs.insert_one({
-                "id": str(uuid.uuid4()),
-                "checked_by_key": user["id"],
-                "checked_by_label": user["label"],
-                "email": r.get("email"),
-                "plan": r.get("plan"),
-                "country": r.get("country"),
-                "member_since": r.get("member_since"),
-                "next_billing": r.get("next_billing"),
-                "profiles": r.get("profiles", []),
-                "browser_cookies": r.get("browser_cookies", ""),
-                "full_cookie": r.get("full_cookie", ""),
-                "nftoken": r.get("nftoken"),
-                "nftoken_link": r.get("nftoken_link"),
-                "created_at": datetime.now(timezone.utc).isoformat()
-            })
+    asyncio.create_task(run_bulk_check(check_id, cookie_blocks, "auto", user))
 
     return {
         "id": check_id,
-        "results": results,
-        "total": len(results),
-        "valid_count": valid_count,
-        "expired_count": expired_count,
-        "invalid_count": invalid_count
+        "total": total,
+        "status": "processing"
     }
 
 
@@ -799,55 +773,47 @@ async def check_cookies_files(files: List[UploadFile] = File(...), user: dict = 
     if not all_cookie_blocks:
         raise HTTPException(status_code=400, detail="No cookies found in uploaded files")
 
-    results = []
-    for block in all_cookie_blocks:
-        result = await check_netflix_cookie(block, "auto")
-        results.append(result)
-
     check_id = str(uuid.uuid4())
-    valid_count = sum(1 for r in results if r["status"] == "valid")
-    expired_count = sum(1 for r in results if r["status"] == "expired")
-    invalid_count = sum(1 for r in results if r["status"] == "invalid")
+    total = len(all_cookie_blocks)
 
     await db.checks.insert_one({
         "id": check_id,
         "user_id": user["id"],
-        "results": results,
-        "total": len(results),
-        "valid_count": valid_count,
-        "expired_count": expired_count,
-        "invalid_count": invalid_count,
+        "results": [],
+        "total": total,
+        "checked_count": 0,
+        "valid_count": 0,
+        "expired_count": 0,
+        "invalid_count": 0,
+        "status": "processing",
         "filename": ", ".join(filenames),
         "created_at": datetime.now(timezone.utc).isoformat()
     })
 
-    for r in results:
-        if r["status"] == "valid":
-            await db.valid_logs.insert_one({
-                "id": str(uuid.uuid4()),
-                "checked_by_key": user["id"],
-                "checked_by_label": user["label"],
-                "email": r.get("email"),
-                "plan": r.get("plan"),
-                "country": r.get("country"),
-                "member_since": r.get("member_since"),
-                "next_billing": r.get("next_billing"),
-                "profiles": r.get("profiles", []),
-                "browser_cookies": r.get("browser_cookies", ""),
-                "full_cookie": r.get("full_cookie", ""),
-                "nftoken": r.get("nftoken"),
-                "nftoken_link": r.get("nftoken_link"),
-                "created_at": datetime.now(timezone.utc).isoformat()
-            })
+    asyncio.create_task(run_bulk_check(check_id, all_cookie_blocks, "auto", user))
 
     return {
         "id": check_id,
-        "results": results,
-        "total": len(results),
-        "valid_count": valid_count,
-        "expired_count": expired_count,
-        "invalid_count": invalid_count,
+        "total": total,
+        "status": "processing",
         "filenames": filenames
+    }
+
+
+@api_router.get("/check/{job_id}/status")
+async def get_check_status(job_id: str, user: dict = Depends(get_current_user)):
+    job = await db.checks.find_one({"id": job_id, "user_id": user["id"]}, {"_id": 0})
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    return {
+        "id": job["id"],
+        "status": job.get("status", "done"),
+        "total": job["total"],
+        "checked_count": job.get("checked_count", job["total"]),
+        "valid_count": job.get("valid_count", 0),
+        "expired_count": job.get("expired_count", 0),
+        "invalid_count": job.get("invalid_count", 0),
+        "results": job.get("results", [])
     }
 
 # --- History Routes ---
