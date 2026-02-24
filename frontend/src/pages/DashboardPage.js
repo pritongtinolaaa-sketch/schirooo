@@ -84,19 +84,20 @@ export default function DashboardPage() {
     e.preventDefault();
     e.stopPropagation();
     setDragActive(false);
-    const file = e.dataTransfer?.files?.[0];
-    if (file) {
-      setSelectedFile(file);
-      toast.success(`File selected: ${file.name}`);
+    const files = Array.from(e.dataTransfer?.files || []);
+    if (files.length > 0) {
+      setSelectedFiles(prev => [...prev, ...files]);
+      toast.success(`${files.length} file(s) added`);
     }
   };
 
   const handleFileSelect = (e) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setSelectedFile(file);
-      toast.success(`File selected: ${file.name}`);
+    const files = Array.from(e.target.files || []);
+    if (files.length > 0) {
+      setSelectedFiles(prev => [...prev, ...files]);
+      toast.success(`${files.length} file(s) selected`);
     }
+    e.target.value = '';
   };
 
   return (
