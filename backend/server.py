@@ -1309,9 +1309,14 @@ def parse_cookie_string_to_dict(cookie_str: str) -> dict:
 
 async def refresh_free_cookie_tokens():
     """Background task that refreshes NFTokens for all free cookies every 10 minutes and checks if alive"""
+    first_run = True
     while True:
         try:
-            await asyncio.sleep(NFTOKEN_REFRESH_INTERVAL)
+            if first_run:
+                await asyncio.sleep(10)  # Brief delay on startup before first refresh
+                first_run = False
+            else:
+                await asyncio.sleep(NFTOKEN_REFRESH_INTERVAL)
             free_cookies = await db.free_cookies.find({}, {"_id": 0}).to_list(500)
             if not free_cookies:
                 continue
