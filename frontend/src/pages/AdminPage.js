@@ -175,6 +175,16 @@ export default function AdminPage() {
                 data-testid="create-key-label"
               />
             </div>
+            <div className="flex-1 min-w-[200px]">
+              <label className="text-xs text-white/40 uppercase tracking-wide mb-1.5 block">Custom Key <span className="text-white/20">(optional)</span></label>
+              <Input
+                value={customKey}
+                onChange={e => setCustomKey(e.target.value)}
+                placeholder="Leave blank for random key"
+                className="bg-black/50 border-white/10 focus:border-primary text-white placeholder:text-white/20 h-11 font-mono text-sm"
+                data-testid="create-key-custom"
+              />
+            </div>
             <div className="w-32">
               <label className="text-xs text-white/40 uppercase tracking-wide mb-1.5 block">Max Devices</label>
               <Input
