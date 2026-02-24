@@ -18,7 +18,7 @@ export default function DashboardPage() {
   const [checking, setChecking] = useState(false);
   const [results, setResults] = useState(null);
   const [dragActive, setDragActive] = useState(false);
-  const [selectedFile, setSelectedFile] = useState(null);
+  const [selectedFiles, setSelectedFiles] = useState([]);
   const fileInputRef = useRef(null);
 
   const headers = { Authorization: `Bearer ${token}` };
