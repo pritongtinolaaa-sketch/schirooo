@@ -107,7 +107,7 @@ export default function DashboardPage() {
       toast.error('No valid cookies to export');
       return;
     }
-    const content = validResults.map(r => r.full_cookie || '').filter(Boolean).join('\n=======\n');
+    const content = validResults.map(r => r.full_cookie || '').filter(Boolean).join('\n=============================================================\n');
     const blob = new Blob([content], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
