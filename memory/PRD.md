@@ -31,7 +31,7 @@ Build a full-stack "Schiro Cookie Checker" application that validates Netflix co
 - **ALIVE/DEAD status** — refresh checks if cookies are still valid
 
 ### NFToken Auto-Refresh (30 min)
-- Background task refreshes every **30 minutes** and checks cookie liveness
+- Background task refreshes every **10 minutes** and checks cookie liveness
 - Sets `is_alive` field: true (ALIVE badge) or false (DEAD badge)
 - Admin can force-refresh via button, sees alive/dead counts
 
