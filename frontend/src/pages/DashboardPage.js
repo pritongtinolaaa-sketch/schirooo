@@ -23,7 +23,7 @@ export default function DashboardPage() {
   const fileInputRef = useRef(null);
   const pollRef = useRef(null);
 
-  const headers = { Authorization: `Bearer ${token}` };
+  const headers = useMemo(() => ({ Authorization: `Bearer ${token}` }), [token]);
 
   const stopPolling = useCallback(() => {
     if (pollRef.current) {
