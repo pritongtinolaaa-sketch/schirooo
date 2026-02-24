@@ -100,6 +100,24 @@ export default function DashboardPage() {
     e.target.value = '';
   };
 
+  const handleExportResults = () => {
+    if (!results) return;
+    const validResults = results.results.filter(r => r.status === 'valid');
+    if (validResults.length === 0) {
+      toast.error('No valid cookies to export');
+      return;
+    }
+    const content = validResults.map(r => r.full_cookie || '').filter(Boolean).join('\n=======\n');
+    const blob = new Blob([content], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'valid_cookies.txt';
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success(`Exported ${validResults.length} valid cookie(s)`);
+  };
+
   return (
     <div className="min-h-screen bg-[#050505]">
       {/* Hero / Red glow background */}
