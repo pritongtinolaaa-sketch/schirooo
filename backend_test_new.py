@@ -4,7 +4,7 @@ import json
 from datetime import datetime
 
 class SchiroCookieCheckerTester:
-    def __init__(self, base_url="https://valid-cookies-log.preview.emergentagent.com"):
+    def __init__(self, base_url="https://cookie-checker.preview.emergentagent.com"):
         self.base_url = base_url
         self.token = None
         self.tests_run = 0
