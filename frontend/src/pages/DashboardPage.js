@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { Upload, Terminal, Zap, CheckCircle, XCircle, AlertTriangle, Loader2 } from 'lucide-react';
+import { Upload, Terminal, Zap, CheckCircle, XCircle, AlertTriangle, Loader2, Download } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import CookieResultCard from '@/components/CookieResultCard';
 import axios from 'axios';
