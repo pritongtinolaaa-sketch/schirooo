@@ -18,6 +18,7 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(true);
   const [newLabel, setNewLabel] = useState('');
   const [newMaxDevices, setNewMaxDevices] = useState(1);
+  const [customKey, setCustomKey] = useState('');
   const [creating, setCreating] = useState(false);
   const [revealedKeys, setRevealedKeys] = useState({});
   const [newKeyValue, setNewKeyValue] = useState(null);
@@ -50,11 +51,13 @@ export default function AdminPage() {
     try {
       const res = await axios.post(`${API}/admin/keys`, {
         label: newLabel,
-        max_devices: newMaxDevices
+        max_devices: newMaxDevices,
+        custom_key: customKey.trim() || undefined
       }, { headers });
       setNewKeyValue(res.data.key_value);
       setNewLabel('');
       setNewMaxDevices(1);
+      setCustomKey('');
       fetchKeys();
       toast.success('Key created');
     } catch (err) {
