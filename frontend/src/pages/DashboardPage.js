@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -17,11 +17,50 @@ export default function DashboardPage() {
   const [formatType, setFormatType] = useState('auto');
   const [checking, setChecking] = useState(false);
   const [results, setResults] = useState(null);
+  const [progress, setProgress] = useState(null);
   const [dragActive, setDragActive] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState([]);
   const fileInputRef = useRef(null);
+  const pollRef = useRef(null);
 
   const headers = { Authorization: `Bearer ${token}` };
+
+  const stopPolling = useCallback(() => {
+    if (pollRef.current) {
+      clearInterval(pollRef.current);
+      pollRef.current = null;
+    }
+  }, []);
+
+  useEffect(() => {
+    return () => stopPolling();
+  }, [stopPolling]);
+
+  const startPolling = useCallback((jobId) => {
+    stopPolling();
+    pollRef.current = setInterval(async () => {
+      try {
+        const res = await axios.get(`${API}/check/${jobId}/status`, { headers });
+        const data = res.data;
+        setProgress({
+          total: data.total,
+          checked: data.checked_count,
+          valid: data.valid_count,
+          expired: data.expired_count,
+          invalid: data.invalid_count,
+        });
+        if (data.status === 'done') {
+          stopPolling();
+          setResults(data);
+          setProgress(null);
+          setChecking(false);
+          toast.success(`Done! ${data.valid_count} valid, ${data.expired_count} expired, ${data.invalid_count} invalid out of ${data.total}`);
+        }
+      } catch {
+        // ignore poll errors
+      }
+    }, 2000);
+  }, [headers, stopPolling]); // eslint-disable-line
 
   const handleCheckPaste = async () => {
     if (!cookieText.trim()) {
@@ -30,17 +69,19 @@ export default function DashboardPage() {
     }
     setChecking(true);
     setResults(null);
+    setProgress(null);
     try {
       const res = await axios.post(`${API}/check`, {
         cookies_text: cookieText,
         format_type: formatType,
       }, { headers });
-      setResults(res.data);
-      toast.success(`Checked ${res.data.total} cookie(s)`);
+      const data = res.data;
+      setProgress({ total: data.total, checked: 0, valid: 0, expired: 0, invalid: 0 });
+      startPolling(data.id);
       setCookieText('');
+      toast.success(`Processing ${data.total} cookie(s)...`);
     } catch (err) {
       toast.error(err.response?.data?.detail || 'Check failed');
-    } finally {
       setChecking(false);
     }
   };
@@ -52,23 +93,24 @@ export default function DashboardPage() {
     }
     setChecking(true);
     setResults(null);
+    setProgress(null);
     try {
       const formData = new FormData();
+      let res;
       if (selectedFiles.length === 1) {
         formData.append('file', selectedFiles[0]);
-        const res = await axios.post(`${API}/check/file`, formData, { headers });
-        setResults(res.data);
-        toast.success(`Checked ${res.data.total} cookie(s) from file`);
+        res = await axios.post(`${API}/check/file`, formData, { headers });
       } else {
         selectedFiles.forEach(f => formData.append('files', f));
-        const res = await axios.post(`${API}/check/files`, formData, { headers });
-        setResults(res.data);
-        toast.success(`Checked ${res.data.total} cookie(s) from ${selectedFiles.length} files`);
+        res = await axios.post(`${API}/check/files`, formData, { headers });
       }
+      const data = res.data;
+      setProgress({ total: data.total, checked: 0, valid: 0, expired: 0, invalid: 0 });
+      startPolling(data.id);
       setSelectedFiles([]);
+      toast.success(`Processing ${data.total} cookie(s)...`);
     } catch (err) {
       toast.error(err.response?.data?.detail || 'Check failed');
-    } finally {
       setChecking(false);
     }
   };
@@ -107,7 +149,15 @@ export default function DashboardPage() {
       toast.error('No valid cookies to export');
       return;
     }
-    const content = validResults.map(r => r.full_cookie || '').filter(Boolean).join('\n=============================================================\n');
+    const separator = '\n=============================================================\n';
+    const content = validResults.map(r => {
+      const lines = [];
+      if (r.email) lines.push(`Email: ${r.email}`);
+      if (r.plan) lines.push(`Plan: ${r.plan}`);
+      lines.push('');
+      lines.push(r.full_cookie || '');
+      return lines.join('\n');
+    }).join(separator);
     const blob = new Blob([content], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -118,9 +168,10 @@ export default function DashboardPage() {
     toast.success(`Exported ${validResults.length} valid cookie(s)`);
   };
 
+  const progressPercent = progress ? Math.round((progress.checked / progress.total) * 100) : 0;
+
   return (
     <div className="min-h-screen bg-[#050505]">
-      {/* Hero / Red glow background */}
       <div
         className="relative"
         style={{
@@ -128,7 +179,6 @@ export default function DashboardPage() {
         }}
       >
         <div className="max-w-5xl mx-auto px-6 py-6 md:py-10">
-          {/* Title */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -143,7 +193,6 @@ export default function DashboardPage() {
             </p>
           </motion.div>
 
-          {/* Input Area */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -245,7 +294,7 @@ export default function DashboardPage() {
                               className="text-red-400 hover:text-red-300 text-xs"
                               data-testid={`remove-file-${i}`}
                             >
-                              ×
+                              x
                             </button>
                           </div>
                         ))}
@@ -303,9 +352,48 @@ export default function DashboardPage() {
             </Tabs>
           </motion.div>
 
+          {/* Live Progress Bar */}
+          <AnimatePresence>
+            {checking && progress && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                className="mt-8 bg-black/60 backdrop-blur-md border border-white/10 rounded-md p-6"
+                data-testid="progress-section"
+              >
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-3">
+                    <Loader2 className="w-5 h-5 animate-spin text-primary" />
+                    <span className="font-bebas text-lg tracking-wider text-white">
+                      CHECKING COOKIES
+                    </span>
+                  </div>
+                  <span className="font-mono text-sm text-white/60">
+                    {progress.checked} / {progress.total}
+                  </span>
+                </div>
+                <div className="w-full h-2 bg-white/5 rounded-full overflow-hidden">
+                  <motion.div
+                    className="h-full bg-primary rounded-full"
+                    initial={{ width: 0 }}
+                    animate={{ width: `${progressPercent}%` }}
+                    transition={{ duration: 0.3 }}
+                  />
+                </div>
+                <div className="flex items-center gap-5 mt-3 text-xs">
+                  <span className="text-green-400">{progress.valid} Valid</span>
+                  <span className="text-red-400">{progress.expired} Expired</span>
+                  <span className="text-yellow-400">{progress.invalid} Invalid</span>
+                  <span className="text-white/30 ml-auto">{progressPercent}%</span>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
           {/* Results */}
           <AnimatePresence>
-            {results && (
+            {results && !checking && (
               <motion.div
                 initial={{ opacity: 0, y: 30 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -313,7 +401,6 @@ export default function DashboardPage() {
                 transition={{ duration: 0.5 }}
                 className="mt-10"
               >
-                {/* Summary Bar */}
                 <div
                   className="flex items-center justify-between gap-6 mb-6 pb-6 border-b border-white/5"
                   data-testid="results-summary"
@@ -351,7 +438,6 @@ export default function DashboardPage() {
                   )}
                 </div>
 
-                {/* Valid Cookies Section */}
                 {results.results.filter(r => r.status === 'valid').length > 0 && (
                   <div className="mb-8" data-testid="valid-section">
                     <div className="flex items-center gap-3 mb-4">
@@ -365,7 +451,7 @@ export default function DashboardPage() {
                           key={i}
                           initial={{ opacity: 0, y: 20 }}
                           animate={{ opacity: 1, y: 0 }}
-                          transition={{ duration: 0.4, delay: i * 0.1 }}
+                          transition={{ duration: 0.4, delay: Math.min(i * 0.05, 1) }}
                         >
                           <CookieResultCard result={result} index={i} />
                         </motion.div>
@@ -374,7 +460,6 @@ export default function DashboardPage() {
                   </div>
                 )}
 
-                {/* Expired Cookies Section */}
                 {results.results.filter(r => r.status === 'expired').length > 0 && (
                   <div className="mb-8" data-testid="expired-section">
                     <div className="flex items-center gap-3 mb-4">
@@ -388,7 +473,7 @@ export default function DashboardPage() {
                           key={i}
                           initial={{ opacity: 0, y: 20 }}
                           animate={{ opacity: 1, y: 0 }}
-                          transition={{ duration: 0.4, delay: i * 0.05 }}
+                          transition={{ duration: 0.4, delay: Math.min(i * 0.05, 1) }}
                         >
                           <CookieResultCard result={result} index={i} />
                         </motion.div>
@@ -397,7 +482,6 @@ export default function DashboardPage() {
                   </div>
                 )}
 
-                {/* Invalid Cookies Section */}
                 {results.results.filter(r => r.status === 'invalid').length > 0 && (
                   <div className="mb-8" data-testid="invalid-section">
                     <div className="flex items-center gap-3 mb-4">
@@ -411,7 +495,7 @@ export default function DashboardPage() {
                           key={i}
                           initial={{ opacity: 0, y: 20 }}
                           animate={{ opacity: 1, y: 0 }}
-                          transition={{ duration: 0.4, delay: i * 0.05 }}
+                          transition={{ duration: 0.4, delay: Math.min(i * 0.05, 1) }}
                         >
                           <CookieResultCard result={result} index={i} />
                         </motion.div>
@@ -423,7 +507,6 @@ export default function DashboardPage() {
             )}
           </AnimatePresence>
 
-          {/* Footer Note */}
           <div className="mt-16 pb-8 text-center" data-testid="footer-note">
             <p className="text-white/20 text-xs tracking-widest uppercase font-mono">
               Created by Schiro. Not for Sale.
