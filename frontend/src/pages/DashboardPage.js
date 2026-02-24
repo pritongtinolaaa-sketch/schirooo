@@ -212,26 +212,43 @@ export default function DashboardPage() {
                   }`}
                 >
                   <Upload className={`w-12 h-12 mx-auto mb-4 ${dragActive ? 'text-primary' : 'text-white/20'}`} />
-                  {selectedFile ? (
+                  {selectedFiles.length > 0 ? (
                     <div>
-                      <p className="text-white font-medium" data-testid="selected-filename">{selectedFile.name}</p>
-                      <p className="text-white/30 text-sm mt-1">{(selectedFile.size / 1024).toFixed(1)} KB</p>
+                      <p className="text-white font-medium" data-testid="selected-filename">
+                        {selectedFiles.length} file{selectedFiles.length > 1 ? 's' : ''} selected
+                      </p>
+                      <div className="mt-2 max-h-32 overflow-y-auto space-y-1">
+                        {selectedFiles.map((f, i) => (
+                          <div key={i} className="flex items-center justify-center gap-2 text-sm text-white/50">
+                            <span className="font-mono truncate max-w-[200px]">{f.name}</span>
+                            <span className="text-white/20">({(f.size / 1024).toFixed(1)} KB)</span>
+                            <button
+                              onClick={() => setSelectedFiles(prev => prev.filter((_, idx) => idx !== i))}
+                              className="text-red-400 hover:text-red-300 text-xs"
+                              data-testid={`remove-file-${i}`}
+                            >
+                              ×
+                            </button>
+                          </div>
+                        ))}
+                      </div>
                       <button
-                        onClick={() => setSelectedFile(null)}
+                        onClick={() => setSelectedFiles([])}
                         className="text-primary text-sm mt-3 hover:underline"
-                        data-testid="remove-file-btn"
+                        data-testid="remove-all-files-btn"
                       >
-                        Remove file
+                        Remove all files
                       </button>
                     </div>
                   ) : (
                     <div>
-                      <p className="text-white/40 mb-1">Drag & drop your cookie file here</p>
-                      <p className="text-white/20 text-sm mb-4">Supports .txt and .json files</p>
+                      <p className="text-white/40 mb-1">Drag & drop your cookie files here</p>
+                      <p className="text-white/20 text-sm mb-4">Supports .txt and .json files — select multiple at once</p>
                       <input
                         ref={fileInputRef}
                         type="file"
                         accept=".txt,.json"
+                        multiple
                         onChange={handleFileSelect}
                         className="hidden"
                         data-testid="file-input"
@@ -250,7 +267,7 @@ export default function DashboardPage() {
                 <div className="flex justify-end mt-4">
                   <Button
                     onClick={handleCheckFile}
-                    disabled={checking || !selectedFile}
+                    disabled={checking || selectedFiles.length === 0}
                     data-testid="check-file-btn"
                     className="bg-primary hover:bg-red-700 text-white font-bebas tracking-widest text-base uppercase rounded-sm shadow-[0_0_15px_rgba(229,9,20,0.4)] transition-all hover:scale-105 active:scale-95 px-8 h-11"
                   >
@@ -259,7 +276,7 @@ export default function DashboardPage() {
                     ) : (
                       <>
                         <Zap className="w-4 h-4 mr-2" />
-                        CHECK FILE
+                        CHECK {selectedFiles.length > 1 ? `${selectedFiles.length} FILES` : 'FILE'}
                       </>
                     )}
                   </Button>
