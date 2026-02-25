@@ -85,6 +85,34 @@ export default function AdminLogsPage() {
     }
   };
 
+  const exportLog = (log) => {
+    const lines = [];
+    if (log.email) lines.push(`Email: ${log.email}`);
+    if (log.plan) lines.push(`Plan: ${log.plan}`);
+    if (log.country) lines.push(`Country: ${log.country}`);
+    if (log.member_since) lines.push(`Member Since: ${log.member_since}`);
+    if (log.next_billing) lines.push(`Next Billing: ${log.next_billing}`);
+    lines.push('');
+    if (log.browser_cookies) {
+      lines.push('=== Browser Cookie ===');
+      lines.push(log.browser_cookies);
+      lines.push('');
+    }
+    if (log.full_cookie) {
+      lines.push('=== Original Cookie ===');
+      lines.push(log.full_cookie);
+    }
+    const blob = new Blob([lines.join('\n')], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const filename = log.email ? log.email.replace(/[^a-zA-Z0-9]/g, '_') : 'cookie';
+    a.download = `${filename}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success('Exported');
+  };
+
   if (!user?.is_master) return null;
 
   return (
