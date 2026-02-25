@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { ScrollText, Trash2, Copy, Check, Loader2, Mail, CreditCard, Globe, Calendar, Key, ChevronDown, AlertCircle } from 'lucide-react';
+import { ScrollText, Trash2, Copy, Check, Loader2, Mail, CreditCard, Globe, Calendar, Key, ChevronDown, AlertCircle, Download } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { motion, AnimatePresence } from 'framer-motion';
 import axios from 'axios';
