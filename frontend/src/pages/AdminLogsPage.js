@@ -207,15 +207,26 @@ export default function AdminLogsPage() {
                         </div>
                       </div>
                     </div>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => deleteLog(log.id)}
-                      className="text-white/15 hover:text-red-400 hover:bg-red-500/10 shrink-0"
-                      data-testid={`delete-log-${idx}`}
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </Button>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => exportLog(log)}
+                        className="text-white/15 hover:text-green-400 hover:bg-green-500/10"
+                        data-testid={`export-log-${idx}`}
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => deleteLog(log.id)}
+                        className="text-white/15 hover:text-red-400 hover:bg-red-500/10"
+                        data-testid={`delete-log-${idx}`}
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </Button>
+                    </div>
                   </div>
 
                   {/* NFToken */}
